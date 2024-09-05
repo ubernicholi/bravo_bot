@@ -1,0 +1,42 @@
+{
+  "62": {
+    "inputs": {
+      "audio_file": [
+        "95",
+        1
+      ],
+      "seek_seconds": 0
+    },
+    "class_type": "VHS_LoadAudio",
+    "_meta": {
+      "title": "Load Audio (Path)🎥🅥🅗🅢"
+    }
+  },
+  "95": {
+    "inputs": {
+      "text": "I'm beginnin' to feel like a Rap God, Rap God\nAll my people from the front to the back nod, back nod\nNow, who thinks their arms are long enough to slap box, slap box?\nThey said I rap like a robot, so call me Rap-bot",
+      "file_name": "IF_whisper_speech",
+      "speaker": "Pigston_Banker_ill.ogg",
+      "torch_compile": false,
+      "cps": 14,
+      "overlap": 100
+    },
+    "class_type": "IF_WhisperSpeech",
+    "_meta": {
+      "title": "IF Whisper Speech🌬️"
+    }
+  },
+  "96": {
+    "inputs": {
+      "filename_prefix": "audio/ComfyUI",
+      "audio": [
+        "62",
+        0
+      ]
+    },
+    "class_type": "SaveAudio",
+    "_meta": {
+      "title": "SaveAudio"
+    }
+  }
+}
