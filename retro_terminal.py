@@ -4,7 +4,7 @@ import random
 from collections import deque
 import textwrap
 import os, logging, time, psutil
-
+from led_controller import LEDController
 
 from dotenv import load_dotenv
 
@@ -88,40 +88,54 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
         self.calculate_max_lines()
         self.update_logs()
 
-        # Initialize CPU usage variables
-        self.cpu_percent = 0
-        self.last_cpu_check = time.time()
+        self.led_controller = LEDController()
 
-        self.THRESHOLD = 50  # CPU usage threshold percentage
-
-        
         # Create CPU activity LED
         self.led_radius = 10
-        self.led = self.canvas.create_oval(
-            width - 100, 15, width - 80, 35, 
-            fill='green', outline='black'
-        )
+        self.leds = {}
+        led_positions = [(width - 100, 20), (width - 200, 20), (width - 300, 20), (width - 400, 20)]
+        led_names = ['cpu', 'webcam', 'telegram', 'motd']
         
-        # Set up GPIO for physical LED if available
-        self.LED_PIN = 17  # GPIO pin number where the LED is connected
-        self.setup_gpio()
-        
-        # Start updating CPU activity
-        self.update_cpu_activity()
+        for i, (name, pos) in enumerate(zip(led_names, led_positions)):
+            self.leds[name] = self.canvas.create_oval(
+                pos[0], pos[1], pos[0] + 20, pos[1] + 20, 
+                fill=self.led_controller.get_led_color(name), outline='black'
+            )
+            self.canvas.create_text(
+                pos[0] + 27, pos[1] + 12, 
+                text=name.upper(), 
+                fill="white", 
+                font=("Courier", 10),
+                anchor="w"
+            )
+            
+        self.toggle_telegram(False)
+        self.toggle_webcam(False)
+        self.last_cpu_check = time.time()
+        # Start updating LED activity
+        self.update_led_activity()
 
-    def setup_gpio(self):
-        self.gpio_available = False
-        if GPIO_AVAILABLE:
-            try:
-                self.chip = gpiod.Chip('gpiochip4')  # Raspberry Pi 5 uses gpiochip4
-                self.led_line = self.chip.get_line(self.LED_PIN)
-                self.led_line.request(consumer="LED", type=gpiod.LINE_REQ_DIR_OUT)
-                self.gpio_available = True
-                print("Successfully initialized GPIO for Raspberry Pi 5")
-            except Exception as e:
-                print(f"Error initializing GPIO: {e}. Physical LED control is disabled.")
-        else:
-            print("GPIO module not available. Physical LED control is disabled.")
+    def update_led_activity(self):
+        current_time = time.time()
+        if current_time - self.last_cpu_check >= 1:  # Update every second
+            cpu_percent = psutil.cpu_percent()
+            self.led_controller.set_cpu_usage(cpu_percent)
+            self.last_cpu_check = current_time
+
+        for led_name, led_oval in self.leds.items():
+            color = self.led_controller.get_led_color(led_name)
+            self.canvas.itemconfig(led_oval, fill=color)
+
+        self.master.after(100, self.update_led_activity)
+
+    def toggle_webcam(self, is_active):
+        self.led_controller.toggle_webcam(is_active)
+
+    def toggle_telegram(self, is_active):
+        self.led_controller.toggle_telegram(is_active)
+
+    def set_motd(self, message):
+        self.led_controller.set_motd(message)
 
     def __del__(self):
         # Clean up GPIO when the object is destroyed
@@ -173,53 +187,6 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
 
         self.crt_frame = ImageTk.PhotoImage(image)
         self.canvas.create_image(0, 0, anchor="nw", image=self.crt_frame)
-
-        self.canvas.create_text(
-            width - 90, 45, 
-            text="CPU", 
-            fill="white", 
-            font=("Courier", 10)
-        )
-
-    def update_cpu_activity(self):
-        current_time = time.time()
-        if current_time - self.last_cpu_check >= 1:  # Update every second
-            self.cpu_percent = psutil.cpu_percent()
-            self.last_cpu_check = current_time
-
-        color = 'red' if self.cpu_percent > self.THRESHOLD else 'green'
-
-        if self.cpu_percent > self.THRESHOLD:
-            # CPU usage is above threshold, blink rapidly
-            blink_state = int(current_time * 10) % 2 == 0  # Blink 5 times per second
-            self.set_led_state(blink_state, color)
-        else:
-            # CPU usage is below threshold, blink slowly
-            blink_state = int(current_time) % 2 == 0  # Blink once per second
-            self.set_led_state(blink_state, color)
-
-        # Update GUI LED color
-        
-        #self.canvas.itemconfig(self.led, fill=color)
-
-        # Schedule the next update
-        self.master.after(100, self.update_cpu_activity)
-
-    def set_led_state(self, state, color):
-        # Update physical LED if available
-        if self.gpio_available:
-            try:
-                self.led_line.set_value(1 if state else 0)
-            except Exception as e:
-                print(f"Error setting LED state: {e}")
-        
-        # Update GUI LED
-        if state:
-            self.canvas.itemconfig(self.led, fill=color)
-        else:
-            self.canvas.itemconfig(self.led, fill=f'dark {color}')
-        #self.canvas.itemconfig(self.led, state='normal' if state else 'hidden')
-
 
     def calculate_max_lines(self):
         font = ImageFont.truetype("courier.ttf", self.font_size)
