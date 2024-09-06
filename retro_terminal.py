@@ -108,7 +108,7 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
                 font=("Courier", 10),
                 anchor="w"
             )
-            
+
         self.toggle_telegram(False)
         self.toggle_webcam(False)
         self.last_cpu_check = time.time()
