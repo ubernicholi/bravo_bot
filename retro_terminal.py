@@ -30,7 +30,7 @@ class RetroTerminal:
         self.font_size = font_size
         self.log_lines = deque(maxlen=max_logs)
 
-        self.canvas = tk.Canvas(master, bg="black", width=width, height=height)
+        self.canvas = tk.Canvas(master, bg="gray5", width=width, height=height)
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
         self.create_crt_frame(width, height)
@@ -93,12 +93,12 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
         for i, (name, pos) in enumerate(zip(led_names, led_positions)):
             self.leds[name] = self.canvas.create_oval(
                 pos[0], pos[1], pos[0] + 20, pos[1] + 20, 
-                fill=self.led_controller.get_led_color(name), outline='black'
+                fill=self.led_controller.get_led_color(name), outline='gray5'
             )
             self.canvas.create_text(
                 pos[0] + 27, pos[1] + 12, 
                 text=name.upper(), 
-                fill="white", 
+                fill="ivory2", 
                 font=("Courier", 10),
                 anchor="w"
             )
@@ -208,7 +208,7 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
 
     def glitch_print(self, text):
         glitched_text = ""
-        colors = ["blue", "magenta", "cyan"]
+        colors = ["blue", "magenta", "cyan", "hot pink"]
         for char in text:
             if random.random() < 0.02:
                 glitched_text += random.choice("@#$%&*░▒▓█▄▀▐")
