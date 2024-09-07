@@ -16,12 +16,6 @@ LOG_FILE = os.getenv('LOG_FILE_TERMINAL')
 logging.basicConfig(filename=LOG_FILE, level=logging.ERROR,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
-try:
-    import gpiod
-    GPIO_AVAILABLE = True
-except ImportError:
-    GPIO_AVAILABLE = False
-
 class RetroTerminal:
     def __init__(self, master, width, height, max_logs=11, font_size=12, log_queue=None, led_control_queue=None):
         self.master = master
@@ -40,7 +34,6 @@ class RetroTerminal:
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
         self.create_crt_frame(width, height)
-
 
         self.ascii_art = """
 ____________  ___  _   _  _____ _     _____ _____ _   _ 
@@ -145,13 +138,6 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
     def set_motd(self, message):
         self.led_controller.set_motd(message)
 
-    def __del__(self):
-        # Clean up GPIO when the object is destroyed
-        if hasattr(self, 'led_line') and self.gpio_available:
-            self.led_line.release()
-        if hasattr(self, 'chip') and self.gpio_available:
-            self.chip.close()
-
     def create_crt_frame(self, width, height, border_width=60):
         image = Image.new('RGBA', (width, height), (0, 0, 0, 255))
         draw = ImageDraw.Draw(image)
@@ -198,7 +184,7 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
 
     def calculate_max_lines(self):
         font = ImageFont.truetype("courier.ttf", self.font_size)
-        unused1,unused2,unused3, line_height = font.getbbox("A")  # text width, height
+        _,_,_, line_height = font.getbbox("A")  # text width, height
         self.max_lines = self.log_display_height // line_height
 
     def update_logs(self):
