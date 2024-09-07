@@ -23,7 +23,7 @@ except ImportError:
     GPIO_AVAILABLE = False
 
 class RetroTerminal:
-    def __init__(self, master, width, height, max_logs=11, font_size=12, log_queue=None):
+    def __init__(self, master, width, height, max_logs=11, font_size=12, log_queue=None, led_control_queue=None):
         self.master = master
         self.master.title("Bravolith Terminal")
         
@@ -89,6 +89,7 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
         self.update_logs()
 
         self.led_controller = LEDController()
+        self.led_control_queue = led_control_queue
 
         # Create CPU activity LED
         self.led_radius = 10
@@ -109,13 +110,20 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
                 anchor="w"
             )
 
-        self.toggle_telegram(False)
-        self.toggle_webcam(False)
         self.last_cpu_check = time.time()
         # Start updating LED activity
         self.update_led_activity()
 
     def update_led_activity(self):
+        while not self.led_control_queue.empty():
+            try:
+                message = self.led_control_queue.get_nowait()
+                if message.startswith('telegram:'):
+                    _, state = message.split(':')
+                    self.toggle_telegram(state == 'True')
+            except:
+                pass
+
         current_time = time.time()
         if current_time - self.last_cpu_check >= 1:  # Update every second
             cpu_percent = psutil.cpu_percent()
@@ -217,7 +225,7 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
         colors = ["blue", "magenta", "cyan"]
         for char in text:
             if random.random() < 0.02:
-                glitched_text += random.choice("@#$%&*")
+                glitched_text += random.choice("@#$%&*░▒▓█▄▀▐")
             else:
                 glitched_text += char
 

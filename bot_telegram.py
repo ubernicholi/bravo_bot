@@ -34,15 +34,21 @@ logging.basicConfig(filename=LOG_FILE, level=logging.ERROR,
 #telegram bot
 
 class TelegramBot:
-    def __init__(self, log_queue):
+    def __init__(self, log_queue, led_control_queue):
         self.log_queue = log_queue
+        self.led_control_queue = led_control_queue
 
     async def get_ip(self,update: Update, context: ContextTypes.DEFAULT_TYPE):
+        current_state = True
+        self.led_control_queue.put(f'telegram:{current_state}')
+
         ip_address,register = self.get_external_ip()
 
         self.log_queue.put(f"Ip Address Registration: {register}\n")
         
         await update.message.reply_text(f"The current external IP address is: {ip_address}")
+        current_state = False
+        self.led_control_queue.put(f'telegram:{current_state}')
 
     def get_external_ip(self):
         try:
@@ -57,6 +63,8 @@ class TelegramBot:
             return f"Error: {str(e)}"
 
     async def check_services(self,update: Update, context: ContextTypes.DEFAULT_TYPE):
+        current_state = True
+        self.led_control_queue.put(f'telegram:{current_state}')
         services = {
             "Alpha_Camera": ("192.168.86.35",8000),
             "Webserver_Bravo": ("192.168.0.16", 80),
@@ -79,6 +87,8 @@ class TelegramBot:
         message = get_service_status()
         self.log_queue.put(f"{message}\n")
         await update.message.reply_text(message)
+        current_state = False
+        self.led_control_queue.put(f'telegram:{current_state}')
 
     def check_service(self,url):
         try:
@@ -123,6 +133,8 @@ class TelegramBot:
     MAX_BOT_MESSAGE_LENGTH = 4000   #split message at 4000 char
 
     async def handle_messages(self,update: Update, context: ContextTypes.DEFAULT_TYPE):
+        current_state = True
+        self.led_control_queue.put(f'telegram:{current_state}')
 
         if update.message.text.startswith('/ask'):
             user_message = ' '.join(context.args)
@@ -149,11 +161,16 @@ class TelegramBot:
             self.log_queue.put(f"Bravo Response: {text_segment}\n")
             await update.message.reply_text(text=text_segment)
 
+        current_state = False
+        self.led_control_queue.put(f'telegram:{current_state}')
+
     #********************************************************************************************************
     # IMAGE generation
 
-
     async def process_image_prompt(self,i_type, update,context):
+        current_state = True
+        self.led_control_queue.put(f'telegram:{current_state}')
+
         client_id = str(uuid.uuid4())
         user_message = ' '.join(context.args)
         
@@ -189,6 +206,9 @@ class TelegramBot:
 
             await update.message.reply_text(text=f"Sorry, there was an error generating the image:\n{error}")
 
+        current_state = False
+        self.led_control_queue.put(f'telegram:{current_state}')
+
     async def handle_normal_image(self,update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self.process_image_prompt('normal', update, context)
     async def handle_enhanced_image(self,update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -200,6 +220,9 @@ class TelegramBot:
     # voice
 
     async def handle_speak(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        current_state = True
+        self.led_control_queue.put(f'telegram:{current_state}')
+
         # TTS settings
         female_voice = 'p339'
         male_voice = 'p313'
@@ -254,7 +277,13 @@ class TelegramBot:
             self.log_queue.put(f'Error communicating with TTS server: {str(e)}\n')
             await update.message.reply_text(f'Error communicating with TTS server: {str(e)}')
 
+        current_state = False
+        self.led_control_queue.put(f'telegram:{current_state}')
+
     async def handle_voice(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        current_state = True
+        self.led_control_queue.put(f'telegram:{current_state}')
+
         client_id = str(uuid.uuid4())
         user_message = ' '.join(context.args)
         args = user_message.split(' ')
@@ -301,9 +330,15 @@ class TelegramBot:
             self.log_queue.put(f"{c_error}\n")
             await update.message.reply_text(text=f"{c_error}")
 
+        current_state = False
+        self.led_control_queue.put(f'telegram:{current_state}')
+
     #**********************************************************************************************************
 
     async def handle_music(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        current_state = True
+        self.led_control_queue.put(f'telegram:{current_state}')
+
         client_id = str(uuid.uuid4())
         user_message = ' '.join(context.args)
         args = user_message.split(' ')
@@ -352,6 +387,8 @@ class TelegramBot:
             self.log_queue.put(f"{c_error}\n")
             await update.message.reply_text(text=f"{c_error}")
 
+        current_state = False
+        self.led_control_queue.put(f'telegram:{current_state}')
     #**********************************************************************************************************
 
     async def run(self):
@@ -380,6 +417,6 @@ class TelegramBot:
         finally:
             await application.stop()
 
-def start_bot(log_queue):
-    bot = TelegramBot(log_queue)
+def start_bot(log_queue, led_control_queue):
+    bot = TelegramBot(log_queue, led_control_queue)
     asyncio.run(bot.run())
