@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuration
-LOG_FILE = os.getenv('LOG_FILE_TELEGRAM')
+LOG_FILE_TELEGRAM = os.getenv('LOG_FILE_TELEGRAM')
 TELEGRAM_KEY = os.getenv('TELEGRAM_KEY')
 KOBOLD_CONFIG_FILE = os.getenv('KOBOLD_CONFIG_FILE')
 COMFYUI_VOICE = os.getenv('COMFYUI_VOICE')
@@ -27,7 +27,7 @@ COMFYUI_MUSIC = os.getenv('COMFYUI_MUSIC')
 TTS_SERVER_URL = os.getenv('TTS_SERVER_URL')
 
 # Set up logging
-logging.basicConfig(filename=LOG_FILE, level=logging.ERROR,
+logging.basicConfig(filename=LOG_FILE_TELEGRAM, level=logging.ERROR,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 #-----------------------------------------------------------------------------------------

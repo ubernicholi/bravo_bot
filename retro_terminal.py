@@ -5,15 +5,18 @@ from collections import deque
 import textwrap
 import os, logging, time, psutil
 from led_controller import LEDController
-
+import cv2
+import threading
 from dotenv import load_dotenv
+import urllib.request
+import numpy as np
 
 # Load environment variables
 load_dotenv()
 
-LOG_FILE = os.getenv('LOG_FILE_TERMINAL')
+LOG_FILE_TERMINAL = os.getenv('LOG_FILE_TERMINAL')
 
-logging.basicConfig(filename=LOG_FILE, level=logging.ERROR,
+logging.basicConfig(filename=LOG_FILE_TERMINAL, level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 class RetroTerminal:
@@ -32,6 +35,15 @@ class RetroTerminal:
 
         self.canvas = tk.Canvas(master, bg="gray5", width=width, height=height)
         self.canvas.pack(fill=tk.BOTH, expand=True)
+        self.led_controller = LEDController()
+        self.led_control_queue = led_control_queue
+
+        
+
+        # Start video stream
+        self.video_stream_url = "http://192.168.0.5:8000/stream.mjpg"
+        self.video_stream = None
+        self.start_video_stream()
 
         self.create_crt_frame(width, height)
 
@@ -56,11 +68,11 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
       ░                      ░                                         
 """
         self.ascii_display = self.canvas.create_text(
-            width // 7, height // 7,
+            width // 2, 50,
             text=self.ascii_art_2,
             fill="blue",
             font=("Courier", 10),
-            anchor="nw"
+            anchor="n"
         )
 
         self.log_display_width = int(width * 0.8)
@@ -81,8 +93,7 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
         self.calculate_max_lines()
         self.update_logs()
 
-        self.led_controller = LEDController()
-        self.led_control_queue = led_control_queue
+
 
         # Create CPU activity LED
         self.led_radius = 10
@@ -106,6 +117,42 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
         self.last_cpu_check = time.time()
         # Start updating LED activity
         self.update_led_activity()
+
+
+    def start_video_stream(self):
+        self.video_stream = self.canvas.create_image(
+            self.width // 2 + 1, self.height // 2 + 1,
+            anchor="center"
+        )
+        self.update_video_frame()
+
+    def update_video_frame(self):
+        try:
+            self.toggle_webcam(True)
+            # Read the image from the URL
+            stream_url = "http://192.168.0.5:8000/stream.mjpg"
+            cap = cv2.VideoCapture(stream_url)
+            _,frame = cap.read()
+            # Resize the frame to fit inside the CRT frame
+            frame = cv2.resize(frame, (self.width - 123, self.height - 124))
+            
+            # Convert the image from BGR to RGB
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # Convert to PhotoImage
+            image = Image.fromarray(frame)
+            photo = ImageTk.PhotoImage(image=image)
+            
+            # Update the image on the canvas
+            self.canvas.itemconfig(self.video_stream, image=photo)
+            self.canvas.image = photo  # Keep a reference to avoid garbage collection
+        except Exception as e:
+            self.toggle_webcam(False)
+
+            print(f"Error updating video frame: {e}")
+
+        # Schedule the next update
+        self.master.after(66, self.update_video_frame)  # Update roughly 15 times per second
 
     def update_led_activity(self):
         while not self.led_control_queue.empty():
@@ -139,7 +186,7 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
         self.led_controller.set_motd(message)
 
     def create_crt_frame(self, width, height, border_width=60):
-        image = Image.new('RGBA', (width, height), (0, 0, 0, 255))
+        image = Image.new('RGBA', (width, height), (0, 0, 0, 100))
         draw = ImageDraw.Draw(image)
         
         # Draw the main CRT frame
@@ -148,7 +195,6 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
             outline=(100, 100, 100, 255),
             width=border_width
         )
-        
         # Draw diagonal lines
         line_color = (50, 50, 50, 255)  # Darker grey for subtle effect
         line_color2 = (25, 25, 25, 255)  # Darker grey for subtle effect

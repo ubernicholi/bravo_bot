@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-LOG_FILE = os.getenv('LOG_FILE')
-logging.basicConfig(filename=LOG_FILE, level=logging.ERROR,
+LOG_FILE_BRAVO = os.getenv('LOG_FILE')
+logging.basicConfig(filename=LOG_FILE_BRAVO, level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Shared queues for communication between processes
