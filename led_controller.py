@@ -8,7 +8,7 @@ class LEDController:
             'cpu': {'color': 'green','color2': 'red', 'state': False, 'gpio_pin': 17,'active' : False},
             'webcam': {'color': 'yellow','color2': 'DarkGoldenrod4', 'state': False, 'active' : False},
             'telegram': {'color': 'dodger blue','color2': 'blue4', 'state': False, 'active' : False},
-            'motd': {'color': 'cyan','color2': 'cyan4', 'state': False, 'active' : True}
+            'monolith': {'color': 'red','color2': 'brown4', 'state': False, 'active' : False}
         }
         self.setup_gpio()
         self.start_blink_threads()
@@ -40,8 +40,8 @@ class LEDController:
                 self.webcam_blink()
             elif led_name == 'telegram':
                 self.telegram_blink()
-            elif led_name == 'motd':
-                self.motd_blink()
+            elif led_name == 'monolith':
+                self.monolith_blink()
 
     def cpu_blink(self):
         blink_speed = 0.4
@@ -59,7 +59,7 @@ class LEDController:
         self.set_led_state('webcam', True)
         time.sleep(blink_speed)  # On for longer
         self.set_led_state('webcam', False)
-        time.sleep(0.2)  # Off for shorter
+        time.sleep(blink_speed)  # Off for shorter
 
     def telegram_blink(self):
         blink_speed = 1.6
@@ -68,11 +68,16 @@ class LEDController:
         self.set_led_state('telegram', True)
         time.sleep(blink_speed)
         self.set_led_state('telegram', False)
-        time.sleep(0.3)
+        time.sleep(blink_speed)
     
-    def motd_blink(self):
-        # Implement MOTD morse code blinking logic here
-        time.sleep(0.5)
+    def monolith_blink(self):
+        blink_speed = 2
+        if self.leds['monolith']['active']:
+            blink_speed = 0.2
+        self.set_led_state('monolith', True)
+        time.sleep(blink_speed)
+        self.set_led_state('monolith', False)
+        time.sleep(blink_speed)
 
     def start_blink_threads(self):
         for led_name in self.leds:
@@ -84,23 +89,15 @@ class LEDController:
         return self.leds[led_name]['state']
 
     def get_led_color(self, led_name):
+        led = self.leds[led_name]
+
+        if not led['state']:
+            return 'grey14'
+
         if led_name == 'cpu':
-            if self.leds[led_name]['state'] == False:
-                return 'grey14'
-            elif self.leds[led_name]['active'] == True:
-                return self.leds[led_name]['color2']
-            else:
-                return self.leds[led_name]['color']
+            return led['color2'] if led['active'] else led['color']
         else:
-            if self.leds[led_name]['state'] == True:
-                if self.leds[led_name]['active'] == True:
-                    return self.leds[led_name]['color']
-                elif self.leds[led_name]['active'] == False:
-                    return self.leds[led_name]['color2']
-            elif self.leds[led_name]['state'] == True:
-                return self.leds[led_name]['color2']
-            else:
-                return 'grey14'
+            return led['color'] if led['active'] else led['color2']
 
     def set_cpu_usage(self, cpu_percent):
         if cpu_percent > 50:
@@ -114,9 +111,8 @@ class LEDController:
     def toggle_telegram(self, is_active):
         self.leds['telegram']['active'] = is_active
 
-    def set_motd(self, message):
-        # Convert message to morse code and store it for blinking
-        pass
+    def set_monolith(self, is_active):
+        self.leds['webcam']['active'] = is_active
 
 # Usage example:
 # led_controller = LEDController()

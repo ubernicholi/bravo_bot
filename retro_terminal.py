@@ -6,21 +6,22 @@ import textwrap
 import os, logging, time, psutil
 from led_controller import LEDController
 import cv2
-import threading
 from dotenv import load_dotenv
 import urllib.request
 import numpy as np
+import threading
+import queue
 
 # Load environment variables
 load_dotenv()
 
 LOG_FILE_TERMINAL = os.getenv('LOG_FILE_TERMINAL')
 
-logging.basicConfig(filename=LOG_FILE_TERMINAL, level=logging.INFO,
+logging.basicConfig(filename=LOG_FILE_TERMINAL, level=logging.ERROR,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 class RetroTerminal:
-    def __init__(self, master, width, height, max_logs=11, font_size=12, log_queue=None, led_control_queue=None):
+    def __init__(self, master, width, height, max_logs=4, font_size=12, log_queue=None, led_control_queue=None):
         self.master = master
         self.master.title("Bravolith Terminal")
         
@@ -38,14 +39,12 @@ class RetroTerminal:
         self.led_controller = LEDController()
         self.led_control_queue = led_control_queue
 
-        
-
         # Start video stream
         self.video_stream_url = "http://192.168.0.5:8000/stream.mjpg"
         self.video_stream = None
-        self.start_video_stream()
+        #self.cap = cv2.VideoCapture(self.video_stream_url)
 
-        self.create_crt_frame(width, height)
+        #self.start_video_stream()
 
         self.ascii_art = """
 ____________  ___  _   _  _____ _     _____ _____ _   _ 
@@ -68,7 +67,7 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
       ░                      ░                                         
 """
         self.ascii_display = self.canvas.create_text(
-            width // 2, 50,
+            width // 2, 54,
             text=self.ascii_art_2,
             fill="blue",
             font=("Courier", 10),
@@ -92,14 +91,13 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
 
         self.calculate_max_lines()
         self.update_logs()
-
-
-
+        
+        self.create_crt_frame(width, height)
         # Create CPU activity LED
         self.led_radius = 10
         self.leds = {}
         led_positions = [(width - 100, 20), (width - 200, 20), (width - 300, 20), (width - 400, 20)]
-        led_names = ['cpu', 'webcam', 'telegram', 'motd']
+        led_names = ['cpu', 'webcam', 'telegram', 'monolith']
         
         for i, (name, pos) in enumerate(zip(led_names, led_positions)):
             self.leds[name] = self.canvas.create_oval(
@@ -118,7 +116,6 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
         # Start updating LED activity
         self.update_led_activity()
 
-
     def start_video_stream(self):
         self.video_stream = self.canvas.create_image(
             self.width // 2 + 1, self.height // 2 + 1,
@@ -128,11 +125,10 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
 
     def update_video_frame(self):
         try:
+                # Read the image from the URL
+            #cap = cv2.VideoCapture(self.video_stream_url)
+            _,frame = self.cap.read()
             self.toggle_webcam(True)
-            # Read the image from the URL
-            stream_url = "http://192.168.0.5:8000/stream.mjpg"
-            cap = cv2.VideoCapture(stream_url)
-            _,frame = cap.read()
             # Resize the frame to fit inside the CRT frame
             frame = cv2.resize(frame, (self.width - 123, self.height - 124))
             
@@ -146,13 +142,16 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
             # Update the image on the canvas
             self.canvas.itemconfig(self.video_stream, image=photo)
             self.canvas.image = photo  # Keep a reference to avoid garbage collection
+            self.master.after(66, self.update_video_frame)  # Update roughly 15 times per second
+
         except Exception as e:
             self.toggle_webcam(False)
 
             print(f"Error updating video frame: {e}")
+            self.master.after(2000, self.update_video_frame)  # Update roughly 15 times per second
 
         # Schedule the next update
-        self.master.after(66, self.update_video_frame)  # Update roughly 15 times per second
+        #Sself.master.after(66, self.update_video_frame)  # Update roughly 15 times per second
 
     def update_led_activity(self):
         while not self.led_control_queue.empty():
@@ -182,11 +181,11 @@ ____________  ___  _   _  _____ _     _____ _____ _   _
     def toggle_telegram(self, is_active):
         self.led_controller.toggle_telegram(is_active)
 
-    def set_motd(self, message):
-        self.led_controller.set_motd(message)
+    def set_monolith(self, is_active):
+        self.led_controller.set_monolith(is_active)
 
     def create_crt_frame(self, width, height, border_width=60):
-        image = Image.new('RGBA', (width, height), (0, 0, 0, 100))
+        image = Image.new('RGBA', (width, height), (0, 25, 0, 100))
         draw = ImageDraw.Draw(image)
         
         # Draw the main CRT frame

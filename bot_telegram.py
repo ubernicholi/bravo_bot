@@ -172,28 +172,37 @@ class TelegramBot:
         self.led_control_queue.put(f'telegram:{current_state}')
 
         client_id = str(uuid.uuid4())
-        user_message = ' '.join(context.args)
-        
+        user_message = ' '.join(context.args) 
+
+        prompt = {}
+
         if update.message.reply_to_message:
             original_message = update.message.reply_to_message.text
             if original_message != None:
                 user_message = user_message + " " + original_message
 
-        prompt = {}
-        prompt = self.load_json(COMFYUI_PROMPT)
         if i_type == 'normal':
+            prompt = self.load_json(COMFYUI_PROMPT)
             prompt["50"]["inputs"]["prompt"] = user_message
             prompt["25"]["inputs"]["noise_seed"] = random.randint(1,4294967294)
+
         elif i_type == 'random':
+            prompt = self.load_json(COMFYUI_PROMPT)
             user_message = words.fetch_random_prompt()
             prompt["50"]["inputs"]["prompt"] = user_message
             prompt["25"]["inputs"]["noise_seed"] = random.randint(1,4294967294)
 
-        if i_type == 'enhanced':
+        elif i_type == 'enhanced':
             prompt = self.load_json(COMFYUI_PROMPT_ENHANCE)
             prompt["50"]["inputs"]["prompt"] = user_message
             prompt["25"]["inputs"]["noise_seed"] = random.randint(1,4294967294)
             prompt["97"]["inputs"]["seed"] = random.randint(1,4294967294)
+
+        if not user_message and not i_type == 'random':
+            await update.message.reply_text('Please provide some text.')
+            current_state = False
+            self.led_control_queue.put(f'telegram:{current_state}')
+            return
 
         self.log_queue.put(f"Generating {i_type} Image of : {user_message}\n")
 
@@ -215,6 +224,7 @@ class TelegramBot:
         await self.process_image_prompt('enhanced', update, context)
     async def handle_random_image(self,update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self.process_image_prompt('random', update, context)
+
 
     #------------------------------------------------------------------------------------------
     # voice
@@ -251,7 +261,7 @@ class TelegramBot:
                 user_message = user_message + " " + original_message
 
         if not user_message:
-            await update.message.reply_text('Please provide some text to speak.')
+            await update.message.reply_text('Please provide some text.')
             return
         
         self.log_queue.put(f"User Message: {user_message}\n")
@@ -304,11 +314,11 @@ class TelegramBot:
             if original_message != None:
                 user_message = user_message + " " + original_message
 
-        prompt["95"]["inputs"]["text"] = user_message
-
         if not user_message:
-            await update.message.reply_text('Please provide some text to speak.')
+            await update.message.reply_text('Please provide some text.')
             return
+        
+        prompt["95"]["inputs"]["text"] = user_message
 
         self.log_queue.put(f"Generate Voice Saying: {user_message}\n")
         
@@ -358,7 +368,7 @@ class TelegramBot:
                 user_message = user_message + " " + original_message
 
         if not user_message:
-            await update.message.reply_text('Please provide some text to convert to music.')
+            await update.message.reply_text('Please provide some text.')
             return
         
         prompt["6"]["inputs"]["text"] = user_message
@@ -403,6 +413,7 @@ class TelegramBot:
         application.add_handler(CommandHandler("speak", self.handle_speak))
         application.add_handler(CommandHandler("voice", self.handle_voice))
         application.add_handler(CommandHandler("music", self.handle_music))
+        #application.add_handler(CommandHandler("webcam", self.handle_webcam))
 
         application.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.TEXT & ~filters.COMMAND, self.handle_messages))
 
