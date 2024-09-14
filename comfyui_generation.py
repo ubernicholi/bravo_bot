@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 COMFYUI_ENDPOINT = os.getenv('COMFYUI_ENDPOINT')
-LOG_FILE = os.getenv('LOG_FILE')
 
 def do_stuff(toggle_flag,prompt, client_id):
     try:

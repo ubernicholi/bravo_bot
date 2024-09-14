@@ -3,13 +3,14 @@ import tkinter as tk
 from retro_terminal import RetroTerminal
 from bot_telegram import start_bot
 import time
-import os, logging
+import os
+import logging
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 LOG_FILE_BRAVO = os.getenv('LOG_FILE')
-logging.basicConfig(filename=LOG_FILE_BRAVO, level=logging.ERROR,
+logging.basicConfig(filename=LOG_FILE_BRAVO, level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Shared queues for communication between processes
@@ -21,9 +22,14 @@ def run_gui(log_queue, led_control_queue):
     terminal = RetroTerminal(root, 800, 600, log_queue=log_queue, led_control_queue=led_control_queue)
     root.mainloop()
 
-if __name__ == '__main__':
-    while True:
+def main():
+    max_restarts = 3
+    restart_count = 0
+    
+    while restart_count < max_restarts:
         try:
+            logging.info("Starting Bravolith application")
+            
             # Start GUI process
             gui_process = multiprocessing.Process(target=run_gui, args=(log_queue, led_control_queue))
             gui_process.start()
@@ -35,24 +41,40 @@ if __name__ == '__main__':
             # Wait for processes to finish
             gui_process.join()
             bot_process.join()
+            
+            # If we reach here, both processes have ended normally
+            logging.info("Bravolith application ended normally")
+            break
+            
         except KeyboardInterrupt:
-            print("KeyboardInterrupt detected. Shutting down...")
+            logging.info("KeyboardInterrupt detected. Shutting down...")
+            break
         except Exception as e:
-            print(f"An error occurred: {e}")
+            logging.error(f"An error occurred: {e}", exc_info=True)
+            restart_count += 1
+            logging.info(f"Restarting application (attempt {restart_count}/{max_restarts})...")
         finally:
             # Terminate processes if they're still running
-            if gui_process.is_alive():
-                gui_process.terminate()
-            if bot_process.is_alive():
-                bot_process.terminate()
+            for process in [gui_process, bot_process]:
+                if process.is_alive():
+                    process.terminate()
+                    process.join(timeout=5)
+                    if process.is_alive():
+                        process.kill()
             
             # Clear the queues
             for queue in [log_queue, led_control_queue]:
                 while not queue.empty():
                     try:
                         queue.get_nowait()
-                    except:
+                    except queue.Empty:
                         pass
-            print("Restarting in 5 seconds...")
-            time.sleep(5)
-        print("Restarting application...")
+            
+            if restart_count < max_restarts:
+                time.sleep(5)
+    
+    if restart_count == max_restarts:
+        logging.error("Max restart attempts reached. Exiting.")
+
+if __name__ == '__main__':
+    main()

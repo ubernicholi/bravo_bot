@@ -4,3 +4,4 @@ __pycache__/
 log_*
 courier.ttf
 
+bot_session.session

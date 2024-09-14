@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 load_dotenv()
 KOBOLD_ENDPOINT = os.getenv('KOBOLD_ENDPOINT')
 MONOLITH_ENDPOINT = os.getenv('MONOLITH_ENDPOINT')
-LOG_FILE = os.getenv('LOG_FILE')
     
 def split_into_messages(text):
     return [text[i:i+4000] for i in range(0, len(text),4000)]

@@ -111,12 +111,5 @@ class LEDController:
     def toggle_telegram(self, is_active):
         self.leds['telegram']['active'] = is_active
 
-    def set_monolith(self, is_active):
-        self.leds['webcam']['active'] = is_active
-
-# Usage example:
-# led_controller = LEDController()
-# led_controller.set_cpu_usage(60)
-# led_controller.toggle_webcam(True)
-# led_controller.toggle_telegram(True)
-# led_controller.set_motd("Hello World")
+    def toggle_monolith(self, is_active):
+        self.leds['monolith']['active'] = is_active
