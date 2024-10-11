@@ -6,7 +6,13 @@ from dotenv import load_dotenv
 load_dotenv()
 KOBOLD_ENDPOINT = os.getenv('KOBOLD_ENDPOINT')
 MONOLITH_ENDPOINT = os.getenv('MONOLITH_ENDPOINT')
+ALPHA_TTS_ENDPOINT = os.getenv('ALPHA_TTS_ENDPOINT')
     
+LOG_FILE_TELEGRAM = os.getenv('LOG_FILE_TELEGRAM')
+# Set up logging
+logging.basicConfig(filename=LOG_FILE_TELEGRAM, level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+
 def split_into_messages(text):
     return [text[i:i+4000] for i in range(0, len(text),4000)]
 
@@ -20,6 +26,11 @@ def process_message(prompt):
                     text = results[0].get('text', '').replace("  ", " ")
                     text = text.replace('<0x0A>', '\n')
                     response_texts = split_into_messages(text)
+                    for text_segment in response_texts:
+                        json_that_thing = {
+                            "text": f"{text_segment}"
+                        }
+                        #requests.post(f"{ALPHA_TTS_ENDPOINT}", json=json_that_thing)
 
                     return response_texts
                 else:

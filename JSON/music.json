@@ -76,7 +76,8 @@
   },
   "11": {
     "inputs": {
-      "seconds": 20
+      "seconds": 20,
+      "batch_size": 1
     },
     "class_type": "EmptyLatentAudio",
     "_meta": {

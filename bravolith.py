@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 LOG_FILE_BRAVO = os.getenv('LOG_FILE')
-logging.basicConfig(filename=LOG_FILE_BRAVO, level=logging.INFO,
+logging.basicConfig(filename=LOG_FILE_BRAVO, level=logging.ERROR,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Shared queues for communication between processes
@@ -28,7 +28,7 @@ def main():
     
     while restart_count < max_restarts:
         try:
-            logging.info("Starting Bravolith application")
+            logging.error("Starting Bravolith application")
             
             # Start GUI process
             gui_process = multiprocessing.Process(target=run_gui, args=(log_queue, led_control_queue))
@@ -43,16 +43,16 @@ def main():
             bot_process.join()
             
             # If we reach here, both processes have ended normally
-            logging.info("Bravolith application ended normally")
+            logging.error("Bravolith application ended normally")
             break
             
         except KeyboardInterrupt:
-            logging.info("KeyboardInterrupt detected. Shutting down...")
+            logging.error("KeyboardInterrupt detected. Shutting down...")
             break
         except Exception as e:
             logging.error(f"An error occurred: {e}", exc_info=True)
             restart_count += 1
-            logging.info(f"Restarting application (attempt {restart_count}/{max_restarts})...")
+            logging.error(f"Restarting application (attempt {restart_count}/{max_restarts})...")
         finally:
             # Terminate processes if they're still running
             for process in [gui_process, bot_process]:

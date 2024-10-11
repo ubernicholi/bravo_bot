@@ -8,140 +8,6 @@
       "title": "Load VAE"
     }
   },
-  "11": {
-    "inputs": {
-      "clip_name1": "clip_l.safetensors",
-      "clip_name2": "t5xxl_fp16.safetensors",
-      "type": "flux"
-    },
-    "class_type": "DualCLIPLoader",
-    "_meta": {
-      "title": "DualCLIPLoader"
-    }
-  },
-  "13": {
-    "inputs": {
-      "noise": [
-        "25",
-        0
-      ],
-      "guider": [
-        "22",
-        0
-      ],
-      "sampler": [
-        "16",
-        0
-      ],
-      "sigmas": [
-        "17",
-        0
-      ],
-      "latent_image": [
-        "80",
-        0
-      ]
-    },
-    "class_type": "SamplerCustomAdvanced",
-    "_meta": {
-      "title": "SamplerCustomAdvanced"
-    }
-  },
-  "16": {
-    "inputs": {
-      "sampler_name": "euler"
-    },
-    "class_type": "KSamplerSelect",
-    "_meta": {
-      "title": "KSamplerSelect"
-    }
-  },
-  "17": {
-    "inputs": {
-      "scheduler": "simple",
-      "steps": 30,
-      "denoise": 1,
-      "model": [
-        "86",
-        0
-      ]
-    },
-    "class_type": "BasicScheduler",
-    "_meta": {
-      "title": "BasicScheduler"
-    }
-  },
-  "22": {
-    "inputs": {
-      "model": [
-        "86",
-        0
-      ],
-      "conditioning": [
-        "84",
-        0
-      ]
-    },
-    "class_type": "BasicGuider",
-    "_meta": {
-      "title": "BasicGuider"
-    }
-  },
-  "25": {
-    "inputs": {
-      "noise_seed": 609023290
-    },
-    "class_type": "RandomNoise",
-    "_meta": {
-      "title": "RandomNoise"
-    }
-  },
-  "50": {
-    "inputs": {
-      "prompt": "pov photo of model seated at restaurant table across from camera, in romantic upscale setting facing camera. medium rare steak is on the table sliced into several pieces, on a wooden board, which also has a small dish of what appears to be a side condiment or salsa with chopped vegetables.",
-      "seed": 813027729521832
-    },
-    "class_type": "Wildcard Processor",
-    "_meta": {
-      "title": "Prompt 1 with wildcard"
-    }
-  },
-  "56": {
-    "inputs": {
-      "prompt": "bad quality, watermark",
-      "seed": 727635183997362
-    },
-    "class_type": "Wildcard Processor",
-    "_meta": {
-      "title": "Negative with Wildcard (Refiner Only)"
-    }
-  },
-  "57": {
-    "inputs": {
-      "text_positive_g": [
-        "50",
-        0
-      ],
-      "text_positive_l": [
-        "50",
-        0
-      ],
-      "text_negative": [
-        "56",
-        0
-      ],
-      "artist": "none",
-      "movie": "none",
-      "style": "none",
-      "fooocus_enhance": "OFF",
-      "fooocus_negative": "OFF",
-      "universal_negative": "OFF"
-    },
-    "class_type": "SDXL Prompt Styler (JPS)",
-    "_meta": {
-      "title": "SDXL Prompt Styler (JPS)"
-    }
-  },
   "61": {
     "inputs": {
       "filename_prefix": "telegram",
@@ -170,7 +36,7 @@
     "inputs": {
       "tile_size": 512,
       "samples": [
-        "13",
+        "100",
         0
       ],
       "vae": [
@@ -183,19 +49,82 @@
       "title": "VAE Decode (Tiled)"
     }
   },
-  "84": {
+  "86": {
+    "inputs": {
+      "unet_name": "flux1-dev-Q8_0.gguf"
+    },
+    "class_type": "UnetLoaderGGUF",
+    "_meta": {
+      "title": "Unet Loader (GGUF)"
+    }
+  },
+  "100": {
+    "inputs": {
+      "seed": "?",
+      "sampler": "euler",
+      "scheduler": "simple",
+      "steps": "30",
+      "guidance": [
+        "110",
+        0
+      ],
+      "max_shift": "",
+      "base_shift": "",
+      "denoise": "1.0",
+      "model": [
+        "86",
+        0
+      ],
+      "conditioning": [
+        "105",
+        0
+      ],
+      "latent_image": [
+        "80",
+        0
+      ]
+    },
+    "class_type": "FluxSamplerParams+",
+    "_meta": {
+      "title": "🔧 Flux Sampler Parameters"
+    }
+  },
+  "102": {
+    "inputs": {
+      "text": "a magestic cloud\n"
+    },
+    "class_type": "Text Multiline",
+    "_meta": {
+      "title": "JSON Input Node"
+    }
+  },
+  "103": {
+    "inputs": {
+      "clip_name1": "clip_l.safetensors",
+      "clip_name2": "t5-v1_1-xxl-encoder-Q8_0.gguf",
+      "type": "flux"
+    },
+    "class_type": "DualCLIPLoaderGGUF",
+    "_meta": {
+      "title": "DualCLIPLoader (GGUF)"
+    }
+  },
+  "105": {
     "inputs": {
       "clip_l": [
-        "57",
-        2
+        "102",
+        0
       ],
       "t5xxl": [
-        "57",
-        2
+        "102",
+        0
       ],
-      "guidance": 2.5,
+      "guidance": [
+        "106",
+        0
+      ],
       "clip": [
-        "11",
+        "103",
         0
       ]
     },
@@ -204,13 +133,26 @@
       "title": "CLIPTextEncodeFlux"
     }
   },
-  "86": {
+  "106": {
     "inputs": {
-      "unet_name": "flux1-dev-Q8_0.gguf"
+      "value": 2.75
     },
-    "class_type": "UnetLoaderGGUF",
+    "class_type": "FloatConstant",
     "_meta": {
-      "title": "Unet Loader (GGUF)"
+      "title": "Float Constant"
+    }
+  },
+  "110": {
+    "inputs": {
+      "float_": [
+        "106",
+        0
+      ],
+      "use_commas": "false"
+    },
+    "class_type": "Float to String",
+    "_meta": {
+      "title": "Float to String (Mikey)"
     }
   }
 }

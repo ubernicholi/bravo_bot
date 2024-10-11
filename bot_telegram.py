@@ -8,6 +8,9 @@ import json
 import urllib
 import emoji
 
+from collections import deque
+from functools import partial
+
 from urllib.parse import quote
 
 from telethon import TelegramClient, events
@@ -48,59 +51,122 @@ class TelegramBot:
         self.log_queue = log_queue
         self.led_control_queue = led_control_queue
         self.client = TelegramClient(MemorySession(), TELEGRAM_API_ID, TELEGRAM_API_HASH)
-
+        self.task_queue = asyncio.Queue()
+        self.max_concurrent_tasks = 1
+        self.running_tasks = set()
 
     async def start(self):
         await self.client.start(bot_token=TELEGRAM_BOT_TOKEN)
-
         self.bot_id = (await self.client.get_me()).id
 
-        @self.client.on(events.NewMessage(pattern='/getip'))
-        async def get_ip_handler(event):
-            await self.get_ip(event)
-
-        @self.client.on(events.NewMessage(pattern='/checkservices'))
-        async def check_services_handler(event):
-            await self.check_services(event)
-
-        @self.client.on(events.NewMessage(pattern='/image'))
-        async def handle_enhanced_image_handler(event):
-            await self.process_image_prompt(event,'enhanced')
-
-        @self.client.on(events.NewMessage(pattern='/normal'))
-        async def handle_normal_image_handler(event):
-            await self.process_image_prompt(event,'normal')
-
-        @self.client.on(events.NewMessage(pattern='/random'))
-        async def handle_random_image_handler(event):
-            await self.process_random_prompt(event)
-
-        @self.client.on(events.NewMessage(pattern='/speak_male'))
-        async def handle_speak_male_handler(event):
-            await self.handle_speak(event, 'male')
-
-        @self.client.on(events.NewMessage(pattern='/speak_female'))
-        async def handle_speak_female_handler(event):
-            await self.handle_speak(event,'female')
+        # Register handlers
+        self.register_handlers()
         
-        @self.client.on(events.NewMessage(pattern='/voice'))
-        async def handle_voice_handler(event):
-            await self.handle_voice(event)
+        # Start task processor
+        asyncio.create_task(self.process_tasks())
+        
+        await self.client.run_until_disconnected()
 
-        @self.client.on(events.NewMessage(pattern='/music'))
-        async def handle_music_handler(event):
-            await self.handle_music(event)
+    def register_handlers(self):
+        handlers = [
+            ('/getip', self.get_ip),
+            ('/checkservices', self.check_services),
+            ('/image', partial(self.process_image_prompt, 'enhanced')),
+            ('/normal', partial(self.process_image_prompt, 'normal')),
+            ('/random', self.process_random_prompt),
+            ('/speak_male', partial(self.handle_speak, 'male')),
+            ('/speak_female', partial(self.handle_speak, 'female')),
+            ('/voice', self.handle_voice),
+            ('/music', self.handle_music),
+            ('/ask', self.handle_messages),
+            ('/webcam_on', self.handle_webcam_on),
+            ('/webcam_off', self.handle_webcam_off),
+            
+        ]
+        
+        for command, handler in handlers:
+            self.client.add_event_handler(
+                self.create_command_handler(command, handler),
+                events.NewMessage(pattern=command)
+            )
+        
+        # Handler for private messages
+        self.client.add_event_handler(
+            self.handle_private_message,
+            events.NewMessage(func=lambda e: e.is_private and not e.message.text.startswith('/'))
+        )
 
-        @self.client.on(events.NewMessage(pattern='/ask'))
-        async def handle_ask_handler(event):
+    def create_command_handler(self, command, handler):
+        async def wrapper(event):
+            await self.acknowledge_command(event)
+            await self.task_queue.put((event, handler))
+        return wrapper
+
+    async def acknowledge_command(self, event):
+        command = event.message.text.split()[0] if event.message and event.message.text else "Unknown command"
+        await event.reply(f"Received command {command}. Processing...")
+
+    async def process_tasks(self):
+        while True:
+            if len(self.running_tasks) < self.max_concurrent_tasks:
+                event, handler = await self.task_queue.get()
+                task = asyncio.create_task(self.run_handler(event, handler))
+                self.running_tasks.add(task)
+                task.add_done_callback(self.running_tasks.discard)
+            else:
+                await asyncio.sleep(0.1)
+
+    async def run_handler(self, event, handler):
+        try:
+            await handler(event)
+        except Exception as e:
+            error_message = f"Error in handler: {str(e)}\n"
+            self.log_queue.put(error_message)
+            await event.reply(f"An error occurred while processing your request: {str(e)}")
+            logging.error(error_message, exc_info=True)
+
+    # Implement your existing handler methods here (get_ip, check_services, etc.)
+    # Make sure they're all async methods
+
+    async def handle_private_message(self, event):
+        if not event.message.text.startswith('/'):
             await self.handle_messages(event)
 
-        @self.client.on(events.NewMessage(func=lambda e: e.is_private))
-        async def handle_private_message(event):
-            if not event.message.text.startswith('/'):
-                await self.handle_messages(event)
+    async def get_ip_handler(self, event):
+        await self.get_ip(event)
 
-        await self.client.run_until_disconnected()
+    async def check_services_handler(self, event):
+        await self.check_services(event)
+
+    async def handle_enhanced_image_handler(self, event):
+        await self.process_image_prompt(event,'enhanced')
+
+    async def handle_normal_image_handler(self, event):
+        await self.process_image_prompt(event,'normal')
+
+    async def handle_random_image_handler(self, event):
+        await self.process_random_prompt(event)
+
+    async def handle_speak_male_handler(self, event):
+        await self.handle_speak(event, 'male')
+
+    async def handle_speak_female_handler(self, event):
+        await self.handle_speak(event,'female')
+    
+    async def handle_voice_handler(self, event):
+        await self.handle_voice(event)
+
+    async def handle_music_handler(self, event):
+        await self.handle_music(event)
+
+    async def handle_ask_handler(self, event):
+        await self.handle_messages(event)
+
+    async def handle_webcam_on_handler(self, event):
+        await self.handle_webcam_on(event)
+
+    async def handle_webcam_off_handler(self, event):
+        await self.handle_webcam_off(event)
 
     #-----------------------------------------------------------------------------------------
     #telegram bot
@@ -181,6 +247,17 @@ class TelegramBot:
         except Exception as e:
             raise ValueError(f"Error converting {input_format} to MP3: {str(e)}")
     
+    async def handle_webcam_on(self, event):
+        self.led_control_queue.put('webcam:' + str(True))
+        self.log_queue.put("Webcam Toggled: ON\n")
+        await event.reply(f"ok : ON")
+        
+    async def handle_webcam_off(self, event):
+        self.led_control_queue.put('webcam:' + str(False))
+        self.log_queue.put("Webcam Toggled: OFF\n")
+        await event.reply(f"ok : OFF")
+        
+
     #------------------------------------------------------------------------------------------
     #Text Generation - Koboldcpp
 
@@ -223,8 +300,7 @@ class TelegramBot:
 
         user_message = words.fetch_random_prompt()
 
-        prompt["50"]["inputs"]["prompt"] = user_message
-        prompt["25"]["inputs"]["noise_seed"] = random.randint(1,4294967294)
+        prompt["102"]["inputs"]["text"] = user_message
 
         self.log_queue.put(f"Generating Random Image of : {user_message}\n")
         await event.reply(f"Generating Random Image of : {user_message}\n")
@@ -246,7 +322,7 @@ class TelegramBot:
 
         self.led_control_queue.put('telegram:' + str(False))
 
-    async def process_image_prompt(self,event,i_type):
+    async def process_image_prompt(self,i_type, event):
         self.led_control_queue.put('telegram:'+ str(True))
         client_id = str(uuid.uuid4())
         
@@ -269,10 +345,8 @@ class TelegramBot:
 
         elif i_type == 'enhanced':
             prompt = self.load_json(COMFYUI_PROMPT_ENHANCE)
-            prompt["97"]["inputs"]["seed"] = random.randint(1,4294967294)
 
-        prompt["50"]["inputs"]["prompt"] = user_message
-        prompt["25"]["inputs"]["noise_seed"] = random.randint(1,4294967294)
+        prompt["102"]["inputs"]["text"] = user_message
 
         self.log_queue.put(f"Generating {i_type} Image of : {user_message}\n")
 
@@ -296,7 +370,7 @@ class TelegramBot:
     #------------------------------------------------------------------------------------------
     # voice
 
-    async def handle_speak(self, event, v_type):
+    async def handle_speak(self, v_type, event):
         self.led_control_queue.put('telegram:' + str(True))
 
         # TTS settings
@@ -450,11 +524,9 @@ class TelegramBot:
         prompt["3"]["inputs"]["seed"] = random.randint(1,4294967294)
 
         self.log_queue.put(f"Generating Music File about: {user_message}\n")
-        
         self.led_control_queue.put('monolith:'+ str(True))
         raw_flac,error = comfyui_generation.do_stuff('audio',prompt,client_id)
         self.led_control_queue.put('monolith:'+ str(False))
-
         if raw_flac is not None:
             try:
                 mp3_data = self.convert_audio_to_mp3(raw_flac, "flac")
@@ -462,12 +534,10 @@ class TelegramBot:
                 # Convert the MP3 data to a file-like object
                 audio_file = io.BytesIO(mp3_data.getvalue())
                 audio_file.name = 'music_sample.mp3'
-
                 # Get the user's name for the performer attribute
                 user = await event.get_sender()
                 performer = user.first_name if user.first_name else user.username
                 performer = f"BRAVOLITH feat. {performer}"
-
                 # Send the audio file
                 await event.reply(file=audio_file, attributes=[
                     types.DocumentAttributeAudio(

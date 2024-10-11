@@ -17,7 +17,7 @@ load_dotenv()
 
 LOG_FILE_TERMINAL = os.getenv('LOG_FILE_TERMINAL')
 
-logging.basicConfig(filename=LOG_FILE_TERMINAL, level=logging.ERROR,
+logging.basicConfig(filename=LOG_FILE_TERMINAL, level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 class CRTFrame:
@@ -227,13 +227,14 @@ class RetroTerminal:
         )
 
     def start_video_stream(self):
+        #self.setup_video_stream()
         self.video_stream.start()
         self.update_video_frame()
-        self.toggle_webcam(True)
+        #self.toggle_webcam(True)
 
     def stop_video_stream(self):
         self.video_stream.stop()
-        self.toggle_webcam(False)
+        #self.toggle_webcam(False)
 
     def update_video_frame(self):
         frame = self.video_stream.get_frame()
@@ -265,6 +266,9 @@ class RetroTerminal:
                 if message.startswith('monolith:'):
                     _, state = message.split(':')
                     self.toggle_monolith(state == 'True')
+                if message.startswith('webcam:'):
+                    _, state = message.split(':')
+                    self.toggle_webcam(state == 'True')
             except queue.Empty:
                 break
 

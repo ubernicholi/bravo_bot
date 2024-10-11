@@ -8,140 +8,6 @@
       "title": "Load VAE"
     }
   },
-  "11": {
-    "inputs": {
-      "clip_name1": "clip_l.safetensors",
-      "clip_name2": "t5xxl_fp16.safetensors",
-      "type": "flux"
-    },
-    "class_type": "DualCLIPLoader",
-    "_meta": {
-      "title": "DualCLIPLoader"
-    }
-  },
-  "13": {
-    "inputs": {
-      "noise": [
-        "25",
-        0
-      ],
-      "guider": [
-        "22",
-        0
-      ],
-      "sampler": [
-        "16",
-        0
-      ],
-      "sigmas": [
-        "17",
-        0
-      ],
-      "latent_image": [
-        "80",
-        0
-      ]
-    },
-    "class_type": "SamplerCustomAdvanced",
-    "_meta": {
-      "title": "SamplerCustomAdvanced"
-    }
-  },
-  "16": {
-    "inputs": {
-      "sampler_name": "euler"
-    },
-    "class_type": "KSamplerSelect",
-    "_meta": {
-      "title": "KSamplerSelect"
-    }
-  },
-  "17": {
-    "inputs": {
-      "scheduler": "simple",
-      "steps": 30,
-      "denoise": 1,
-      "model": [
-        "86",
-        0
-      ]
-    },
-    "class_type": "BasicScheduler",
-    "_meta": {
-      "title": "BasicScheduler"
-    }
-  },
-  "22": {
-    "inputs": {
-      "model": [
-        "86",
-        0
-      ],
-      "conditioning": [
-        "84",
-        0
-      ]
-    },
-    "class_type": "BasicGuider",
-    "_meta": {
-      "title": "BasicGuider"
-    }
-  },
-  "25": {
-    "inputs": {
-      "noise_seed": 26232106
-    },
-    "class_type": "RandomNoise",
-    "_meta": {
-      "title": "RandomNoise"
-    }
-  },
-  "50": {
-    "inputs": {
-      "prompt": "a wizrad casting the spell \"GUN\"",
-      "seed": 813027729521832
-    },
-    "class_type": "Wildcard Processor",
-    "_meta": {
-      "title": "Prompt 1 with wildcard"
-    }
-  },
-  "56": {
-    "inputs": {
-      "prompt": "bad quality, watermark",
-      "seed": 727635183997362
-    },
-    "class_type": "Wildcard Processor",
-    "_meta": {
-      "title": "Negative with Wildcard (Refiner Only)"
-    }
-  },
-  "57": {
-    "inputs": {
-      "text_positive_g": [
-        "97",
-        0
-      ],
-      "text_positive_l": [
-        "97",
-        0
-      ],
-      "text_negative": [
-        "56",
-        0
-      ],
-      "artist": "none",
-      "movie": "none",
-      "style": "none",
-      "fooocus_enhance": "OFF",
-      "fooocus_negative": "OFF",
-      "universal_negative": "OFF"
-    },
-    "class_type": "SDXL Prompt Styler (JPS)",
-    "_meta": {
-      "title": "SDXL Prompt Styler (JPS)"
-    }
-  },
   "61": {
     "inputs": {
       "filename_prefix": "telegram",
@@ -170,7 +36,7 @@
     "inputs": {
       "tile_size": 512,
       "samples": [
-        "13",
+        "100",
         0
       ],
       "vae": [
@@ -183,27 +49,6 @@
       "title": "VAE Decode (Tiled)"
     }
   },
-  "84": {
-    "inputs": {
-      "clip_l": [
-        "57",
-        2
-      ],
-      "t5xxl": [
-        "57",
-        2
-      ],
-      "guidance": 2.5,
-      "clip": [
-        "11",
-        0
-      ]
-    },
-    "class_type": "CLIPTextEncodeFlux",
-    "_meta": {
-      "title": "CLIPTextEncodeFlux"
-    }
-  },
   "86": {
     "inputs": {
       "unet_name": "flux1-dev-Q8_0.gguf"
@@ -213,23 +58,120 @@
       "title": "Unet Loader (GGUF)"
     }
   },
-  "97": {
+  "98": {
     "inputs": {
       "api_url": "http://192.168.0.6:8051/api/v1",
       "system_prompt": "you are now a prompt generator for stable diffusion.\n\nrules of prompt generation:\n\n1)Start with the user's initial prompt or keywords.\n2)Analyze the core elements and themes present\n3)Expand on each key element with additional descriptive details\n4)Add sensory information (visual, auditory, tactile, etc.) where appropriate\n5)Suggest composition elements (foreground, background, focal points)\n6)Incorporate relevant artistic styles or techniques if applicable\n7)Ensure coherence between all elements of the expanded prompt\n8)Maintain the original intent and mood of the user's input\n9)Use vivid, evocative language to enhance imagery\n10)Include color palettes or lighting descriptions when relevant\n11)Suggest textures, materials, or surface qualities for objects\n12)Add atmospheric or environmental details to set the scene\n13)Propose dynamic elements or implied motion where suitable\n14)Incorporate abstract concepts or emotions if fitting the prompt's style\n15)Blend concrete and abstract elements for a balanced description\n16)Use metaphors or similes to enhance the imagery\n17)Suggest scale or proportions of key elements\n18)Keep the final prompt concise yet richly detailed",
       "prompt": [
-        "50",
+        "102",
         0
       ],
       "llm_mode": "Gemma2",
       "preset": "simple_logical",
       "temperature_override": 0,
       "max_length": 320,
-      "seed": 830676634
+      "seed": 1052408059852399
     },
     "class_type": "SP_KoboldCpp",
     "_meta": {
       "title": "SP_KoboldCpp"
+    }
+  },
+  "100": {
+    "inputs": {
+      "seed": "?",
+      "sampler": "euler",
+      "scheduler": "simple",
+      "steps": "30",
+      "guidance": [
+        "110",
+        0
+      ],
+      "max_shift": "",
+      "base_shift": "",
+      "denoise": "1.0",
+      "model": [
+        "86",
+        0
+      ],
+      "conditioning": [
+        "105",
+        0
+      ],
+      "latent_image": [
+        "80",
+        0
+      ]
+    },
+    "class_type": "FluxSamplerParams+",
+    "_meta": {
+      "title": "🔧 Flux Sampler Parameters"
+    }
+  },
+  "102": {
+    "inputs": {
+      "text": "a magestic cloud\n"
+    },
+    "class_type": "Text Multiline",
+    "_meta": {
+      "title": "JSON Input Node"
+    }
+  },
+  "103": {
+    "inputs": {
+      "clip_name1": "clip_l.safetensors",
+      "clip_name2": "t5-v1_1-xxl-encoder-Q8_0.gguf",
+      "type": "flux"
+    },
+    "class_type": "DualCLIPLoaderGGUF",
+    "_meta": {
+      "title": "DualCLIPLoader (GGUF)"
+    }
+  },
+  "105": {
+    "inputs": {
+      "clip_l": [
+        "98",
+        0
+      ],
+      "t5xxl": [
+        "98",
+        0
+      ],
+      "guidance": [
+        "106",
+        0
+      ],
+      "clip": [
+        "103",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncodeFlux",
+    "_meta": {
+      "title": "CLIPTextEncodeFlux"
+    }
+  },
+  "106": {
+    "inputs": {
+      "value": 2.75
+    },
+    "class_type": "FloatConstant",
+    "_meta": {
+      "title": "Float Constant"
+    }
+  },
+  "110": {
+    "inputs": {
+      "float_": [
+        "106",
+        0
+      ],
+      "use_commas": "false"
+    },
+    "class_type": "Float to String",
+    "_meta": {
+      "title": "Float to String (Mikey)"
     }
   }
 }
