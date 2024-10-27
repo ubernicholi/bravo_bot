@@ -17,7 +17,7 @@ load_dotenv()
 
 LOG_FILE_TERMINAL = os.getenv('LOG_FILE_TERMINAL')
 
-logging.basicConfig(filename=LOG_FILE_TERMINAL, level=logging.INFO,
+logging.basicConfig(filename=LOG_FILE_TERMINAL, level=logging.WARNING,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 class CRTFrame:

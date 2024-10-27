@@ -63,13 +63,13 @@
       "seed": "?",
       "sampler": "euler",
       "scheduler": "simple",
-      "steps": "30",
+      "steps": "25",
       "guidance": [
         "110",
         0
       ],
-      "max_shift": "",
-      "base_shift": "",
+      "max_shift": "1.15",
+      "base_shift": "0.5",
       "denoise": "1.0",
       "model": [
         "86",
@@ -135,7 +135,7 @@
   },
   "106": {
     "inputs": {
-      "value": 2.75
+      "value": 3.5
     },
     "class_type": "FloatConstant",
     "_meta": {

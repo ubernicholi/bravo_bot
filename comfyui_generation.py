@@ -35,18 +35,24 @@ def do_stuff(toggle_flag, prompt, client_id):
         ws = ws_manager.create_connection(client_id)
         files = ws_manager.send_prompt(toggle_flag, ws, prompt, client_id)
         ws.close()
-
+        
+        # Create a list to store all file data
+        all_files = []
+        
         for node_id in files:
             if files[node_id]:
-                file_data = files[node_id][0]
-                return file_data, None
-
-        logging.error("Empty results from API.")
-        return None, "Sorry, I couldn't process your message.(sent bad json)"
-
+                # Append all files from this node
+                all_files.extend(files[node_id])
+        
+        if all_files:
+            return all_files, None
+        else:
+            logging.error("Empty results from API.")
+            return None, "Sorry, I couldn't process your message.(sent bad json)"
+            
     except Exception as e:
-        logging.error(f"Request to API failed: {e}")
-        return None, e
+        logging.error(f"Error in do_stuff: {str(e)}")
+        return None, str(e)
 
 def send_prompt(toggle_flag, ws, prompt, client_id):
     prompt_id = queue_prompt(prompt, client_id)['prompt_id']

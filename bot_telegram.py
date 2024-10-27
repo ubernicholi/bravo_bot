@@ -13,7 +13,7 @@ from functools import partial
 
 from urllib.parse import quote
 
-from telethon import TelegramClient, events
+from telethon import TelegramClient, events, Button
 from telethon.tl import types
 from telethon.sessions import MemorySession
 
@@ -43,7 +43,7 @@ TTS_SERVER_URL = os.getenv('TTS_SERVER_URL')
 FREEMYIP_URL = os.getenv('FREEMYIP_ENDPOINT')
 
 # Set up logging
-logging.basicConfig(filename=LOG_FILE_TELEGRAM, level=logging.ERROR,
+logging.basicConfig(filename=LOG_FILE_TELEGRAM, level=logging.WARNING,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 class TelegramBot:
@@ -54,6 +54,35 @@ class TelegramBot:
         self.task_queue = asyncio.Queue()
         self.max_concurrent_tasks = 1
         self.running_tasks = set()
+
+        # Define preset resolutions
+        self.preset_resolutions = {
+            "portrait": (512, 768),
+            "landscape": (768, 512),
+            "square": (512, 512),
+            "hd": (1024, 768),
+            "wide":(1536,512)
+        }
+        self.affirmative_responses = [
+            "Got it! 👍",
+            "Processing your request... ⚡",
+            "On it! 🎨",
+            "Starting generation... 🖼️",
+            "Working on it! 🎯",
+            "Challenge accepted! 🚀",
+            "Let's make some art! 🎨",
+            "Here we go! ✨",
+            "Creating your vision... 🌟",
+            "Magic in progress... ✨",
+            "Beginning the creative process... 🎭",
+            "Starting the image journey... 🗺️",
+            "Firing up the generators... ⚡",
+            "Initializing creative mode... 🎨",
+            "Ready to create! 🎯"
+        ]
+
+        # Store user states for resolution selection
+        self.user_states = {}
 
     async def start(self):
         await self.client.start(bot_token=TELEGRAM_BOT_TOKEN)
@@ -71,8 +100,7 @@ class TelegramBot:
         handlers = [
             ('/getip', self.get_ip),
             ('/checkservices', self.check_services),
-            ('/image', partial(self.process_image_prompt, 'enhanced')),
-            ('/normal', partial(self.process_image_prompt, 'normal')),
+            ('/image', self.handle_image_generation),  # New unified command
             ('/random', self.process_random_prompt),
             ('/speak_male', partial(self.handle_speak, 'male')),
             ('/speak_female', partial(self.handle_speak, 'female')),
@@ -90,6 +118,12 @@ class TelegramBot:
                 events.NewMessage(pattern=command)
             )
         
+        # Add handler for resolution selection callbacks
+        self.client.add_event_handler(
+            self.handle_callback,
+            events.CallbackQuery()
+        )
+        
         # Handler for private messages
         self.client.add_event_handler(
             self.handle_private_message,
@@ -98,7 +132,7 @@ class TelegramBot:
 
     def create_command_handler(self, command, handler):
         async def wrapper(event):
-            await self.acknowledge_command(event)
+            #await self.acknowledge_command(event)
             await self.task_queue.put((event, handler))
         return wrapper
 
@@ -125,7 +159,6 @@ class TelegramBot:
             await event.reply(f"An error occurred while processing your request: {str(e)}")
             logging.error(error_message, exc_info=True)
 
-    # Implement your existing handler methods here (get_ip, check_services, etc.)
     # Make sure they're all async methods
 
     async def handle_private_message(self, event):
@@ -138,11 +171,95 @@ class TelegramBot:
     async def check_services_handler(self, event):
         await self.check_services(event)
 
-    async def handle_enhanced_image_handler(self, event):
-        await self.process_image_prompt(event,'enhanced')
+    async def handle_image_generation(self, event):
+        user_id = event.sender_id
+        message = event.message.text.split(None, 1)
+        
+        # Create inline keyboard for generation type selection
+        keyboard = [
+            [
+                Button.inline("Normal Generation", data=f"type_normal_{user_id}"),
+                Button.inline("Enhanced Generation", data=f"type_enhanced_{user_id}")
+            ]
+        ]
+        
+        # Store the original prompt in user state
+        prompt = message[1] if len(message) > 1 else ''
+        self.user_states[user_id] = {
+            'prompt': prompt,
+            'original_message': event
+        }
+        
+        await event.reply(
+            "Please select generation type:",
+            buttons=keyboard
+        )
 
-    async def handle_normal_image_handler(self, event):
-        await self.process_image_prompt(event,'normal')
+    async def show_resolution_options(self, event, user_id):
+        keyboard = [
+            [
+                Button.inline("Portrait (512x768)", data=f"res_portrait_{user_id}"),
+                Button.inline("Landscape (768x512)", data=f"res_landscape_{user_id}")
+            ],
+            [
+                Button.inline("Square (512x512)", data=f"res_square_{user_id}"),
+                Button.inline("HD (1024x768)", data=f"res_hd_{user_id}")
+            ],
+            [
+                Button.inline("Wide (1536x512)", data=f"res_wide_{user_id}"),
+                #Button.inline("Custom Resolution", data=f"res_custom_{user_id}")
+            ]
+        ]
+        
+        await event.edit(
+            "Please select an image resolution:",
+            buttons=keyboard
+        )
+
+    async def handle_callback(self, event):
+        user_id = int(event.data.decode().split('_')[-1])
+        callback_type = event.data.decode().split('_')[0]
+        
+        if user_id not in self.user_states:
+            await event.answer("Session expired. Please try again.")
+            return
+        
+        if callback_type == 'type':
+            # Handle generation type selection
+            generation_type = event.data.decode().split('_')[1]
+            self.user_states[user_id]['generation_type'] = generation_type
+            await event.answer()
+            await self.show_resolution_options(event, user_id)
+            return
+            
+        elif callback_type == 'res':
+            resolution_type = event.data.decode().split('_')[1]
+            
+            if resolution_type == 'custom':
+                await event.answer()
+                await event.reply(
+                    "Please enter your desired resolution in the format 'WxH' (e.g., 640x480).\n"
+                    "Supported dimensions: Width: 256-1536, Height: 256-1536"
+                )
+                self.user_states[user_id]['waiting_for_resolution'] = True
+                return
+            
+            # Get resolution from presets
+            width, height = self.preset_resolutions[resolution_type]
+            original_event = self.user_states[user_id]['original_message']
+            prompt = self.user_states[user_id]['prompt']
+            generation_type = self.user_states[user_id]['generation_type']
+            
+            # Clean up user state
+            del self.user_states[user_id]
+            
+            await event.answer()
+            await original_event.reply(random.choice(self.affirmative_responses))
+            await self.process_image_prompt(generation_type, original_event, width, height, prompt)
+
+    def is_valid_resolution(self, width, height):
+        return (256 <= width <= 1536 and 
+                256 <= height <= 1536)
 
     async def handle_random_image_handler(self, event):
         await self.process_random_prompt(event)
@@ -167,6 +284,7 @@ class TelegramBot:
 
     async def handle_webcam_off_handler(self, event):
         await self.handle_webcam_off(event)
+
 
     #-----------------------------------------------------------------------------------------
     #telegram bot
@@ -306,65 +424,91 @@ class TelegramBot:
         await event.reply(f"Generating Random Image of : {user_message}\n")
 
         self.led_control_queue.put('monolith:'+ str(True))
-        img_to_send,error = comfyui_generation.do_stuff('images',prompt,client_id)
+        images_data,error = comfyui_generation.do_stuff('images',prompt,client_id)
         self.led_control_queue.put('monolith:'+ str(False))
 
-        if img_to_send is not None:
-            # Convert the image data to a file-like object
-            image_file = io.BytesIO(img_to_send)
-            image_file.name = 'generated_image.png'  # Give a name to the file
-
-            # Send the image
-            await event.reply(file=image_file)
+        if images_data is not None:
+            # Send each image in the batch
+            for i, img_data in enumerate(images_data, 1):
+                image_file = io.BytesIO(img_data)
+                image_file.name = f'generated_image_{i}.png'
+                
+                # Add a small delay between sends to avoid rate limiting
+                if i > 1:
+                    await asyncio.sleep(0.5)
+                
+                try:
+                    await event.reply(
+                        file=image_file
+                        #caption=f"Image {i} of {len(images_data)}" if len(images_data) > 1 else None
+                    )
+                except Exception as e:
+                    self.log_queue.put(f"Error sending image {i}: {str(e)}\n")
+                    await event.reply(f"Error sending image {i}: {str(e)}")
         else:
-            self.log_queue.put(f"Sorry, there was an error generating the image:\n{error}\n")
-            await event.reply(f"Sorry, there was an error generating the image:\n{error}")
-
+            self.log_queue.put(f"Sorry, there was an error generating the images:\n{error}\n")
+            await event.reply(f"Sorry, there was an error generating the images:\n{error}")
+            
         self.led_control_queue.put('telegram:' + str(False))
 
-    async def process_image_prompt(self,i_type, event):
-        self.led_control_queue.put('telegram:'+ str(True))
+    async def process_image_prompt(self, i_type, event, width=512, height=512, user_message=''):
+        self.led_control_queue.put('telegram:' + str(True))
         client_id = str(uuid.uuid4())
         
-        user_message = event.message.text.split(None, 1)[1] if len(event.message.text.split()) > 1 else ''
-
-        if event.message.is_reply:
-            replied = await event.message.get_reply_message()
-            if replied.text:
-                user_message += " " + replied.text
-
+        if not user_message:
+            user_message = event.message.text.split(None, 1)[1] if len(event.message.text.split()) > 1 else ''
+            if event.message.is_reply:
+                replied = await event.message.get_reply_message()
+                if replied.text:
+                    user_message += " " + replied.text
+        
         if not user_message:
             await event.reply('Please provide some text.')
-            self.led_control_queue.put('telegram:'+ str(False))
+            self.led_control_queue.put('telegram:' + str(False))
             return
-
+            
         prompt = {}
-
         if i_type == 'normal':
             prompt = self.load_json(COMFYUI_PROMPT)
-
         elif i_type == 'enhanced':
             prompt = self.load_json(COMFYUI_PROMPT_ENHANCE)
-
+            
+        # Update the prompt with resolution
         prompt["102"]["inputs"]["text"] = user_message
-
-        self.log_queue.put(f"Generating {i_type} Image of : {user_message}\n")
-
-        self.led_control_queue.put('monolith:'+ str(True))
-        img_to_send,error = comfyui_generation.do_stuff('images',prompt,client_id)
-        self.led_control_queue.put('monolith:'+ str(False))
-
-        if img_to_send is not None:
-            # Convert the image data to a file-like object
-            image_file = io.BytesIO(img_to_send)
-            image_file.name = 'generated_image.png'  # Give a name to the file
-
-            # Send the image
-            await event.reply(file=image_file)
+        prompt["100"]["inputs"]["seed"] = random.randint(1, 4294967294)
+        prompt["80"]["inputs"]["width"] = width
+        prompt["80"]["inputs"]["height"] = height
+        #prompt["80"]["inputs"]["batch_size"] = 2
+        
+        generation_type = "Normal" if i_type == "normal" else "Enhanced"
+        self.log_queue.put(f"Generating {generation_type} Image of: {user_message} at {width}x{height}\n")
+        self.led_control_queue.put('monolith:' + str(True))
+        
+        images_data, error = comfyui_generation.do_stuff('images', prompt, client_id)
+        self.led_control_queue.put('monolith:' + str(False))
+        
+        if images_data is not None:
+            # Send each image in the batch
+            for i, img_data in enumerate(images_data, 1):
+                image_file = io.BytesIO(img_data)
+                image_file.name = f'generated_image_{i}.png'
+                
+                # Add a small delay between sends to avoid rate limiting
+                if i > 1:
+                    await asyncio.sleep(0.5)
+                
+                try:
+                    await event.reply(
+                        file=image_file
+                        #caption=f"Image {i} of {len(images_data)}" if len(images_data) > 1 else None
+                    )
+                except Exception as e:
+                    self.log_queue.put(f"Error sending image {i}: {str(e)}\n")
+                    await event.reply(f"Error sending image {i}: {str(e)}")
         else:
-            self.log_queue.put(f"Sorry, there was an error generating the image:\n{error}\n")
-            await event.reply(f"Sorry, there was an error generating the image:\n{error}")
-
+            self.log_queue.put(f"Sorry, there was an error generating the images:\n{error}\n")
+            await event.reply(f"Sorry, there was an error generating the images:\n{error}")
+            
         self.led_control_queue.put('telegram:' + str(False))
 
     #------------------------------------------------------------------------------------------

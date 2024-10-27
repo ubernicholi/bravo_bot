@@ -61,7 +61,7 @@
   "98": {
     "inputs": {
       "api_url": "http://192.168.0.6:8051/api/v1",
-      "system_prompt": "you are now a prompt generator for stable diffusion.\n\nrules of prompt generation:\n\n1)Start with the user's initial prompt or keywords.\n2)Analyze the core elements and themes present\n3)Expand on each key element with additional descriptive details\n4)Add sensory information (visual, auditory, tactile, etc.) where appropriate\n5)Suggest composition elements (foreground, background, focal points)\n6)Incorporate relevant artistic styles or techniques if applicable\n7)Ensure coherence between all elements of the expanded prompt\n8)Maintain the original intent and mood of the user's input\n9)Use vivid, evocative language to enhance imagery\n10)Include color palettes or lighting descriptions when relevant\n11)Suggest textures, materials, or surface qualities for objects\n12)Add atmospheric or environmental details to set the scene\n13)Propose dynamic elements or implied motion where suitable\n14)Incorporate abstract concepts or emotions if fitting the prompt's style\n15)Blend concrete and abstract elements for a balanced description\n16)Use metaphors or similes to enhance the imagery\n17)Suggest scale or proportions of key elements\n18)Keep the final prompt concise yet richly detailed",
+      "system_prompt": "you are now a prompt generator for stable diffusion.\n\nrules of prompt generation:\n\n1)Start with the user's initial prompt or keywords.\n2)Analyze the core elements and themes present\n3)Expand on each key element with additional descriptive details\n4)Add sensory information (visual, auditory, tactile, etc.) where appropriate\n5)Suggest composition elements (foreground, background, focal points)\n6)Incorporate relevant artistic styles or techniques if applicable\n7)Ensure coherence between all elements of the expanded prompt\n8)Maintain the original intent and mood of the user's input\n9)Use vivid, evocative language to enhance imagery\n10)Include color palettes or lighting descriptions when relevant\n11)Suggest textures, materials, or surface qualities for objects\n12)Add atmospheric or environmental details to set the scene\n13)Propose dynamic elements or implied motion where suitable\n14)Incorporate abstract concepts or emotions if fitting the prompt's style\n15)Blend concrete and abstract elements for a balanced description\n16)Use metaphors or similes to enhance the imagery\n17)Suggest scale or proportions of key elements\n18)Keep the final prompt concise yet richly detailed\n19)Single Paragraph",
       "prompt": [
         "102",
         0
@@ -82,13 +82,13 @@
       "seed": "?",
       "sampler": "euler",
       "scheduler": "simple",
-      "steps": "30",
+      "steps": "25",
       "guidance": [
         "110",
         0
       ],
-      "max_shift": "",
-      "base_shift": "",
+      "max_shift": "1.15",
+      "base_shift": "0.5",
       "denoise": "1.0",
       "model": [
         "86",
@@ -154,7 +154,7 @@
   },
   "106": {
     "inputs": {
-      "value": 2.75
+      "value": 3.5
     },
     "class_type": "FloatConstant",
     "_meta": {
