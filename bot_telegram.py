@@ -64,60 +64,89 @@ class TelegramBot:
             "hd": (1024, 768),
             "wide":(1536,512)
         }
-        self.affirmative_responses = [
-            "Making this! 👍",
-            "Processing my request... ⚡",
-            "On it! 🎨",
-            "Starting generation... 🖼️",
-            "Working on it! 🎯",
-            "Challenge accepted! 🚀",
-            "Let's make some art! 🎨",
-            "Here we go! ✨",
-            "Creating my vision... 🌟",
-            "Magic in progress... ✨",
-            "Beginning the creative process... 🎭",
-            "Starting the image journey... 🗺️",
-            "Firing up the generators... ⚡",
-            "Initializing creative mode... 🎨",
-            "Ready to create! 🎯"
-        ]
-        self.sarcastic_responses = [
-            "Well, that is... certainly a choice... 🤨",
-            "Interesting use of technology.... 👀",
-            "Do your parents know you're into that? 😅",
-            "Oh, we're really doing this, huh? 🫣",
-            "This should be... something... ✨",
-            "Preparing to make... whatever this is... 🎨",
-            "Your genius is... fascinating... 🧐",
-            "Starting your... unique... request... 🤔",
-            "This will definitely be one for the archives... 📚",
-            "Well, someone had to try it, I guess... 🤷",
-            "Your creativity is... remarkable... 🎭",
-            "Processing your... distinctive... vision... 👁️",
-            "This should be... memorable... 🫢",
-            "Living dangerously today, aren't we? 😏",
-            "Boldly going where taste hasn't gone before... 🚀"
-        ]
 
-        self.music_responses = [
-
-            "Let's lay down some tracks! 🎵",
-            "Time to make musical magic! 🎹",
-            "Getting the studio warmed up! 🎼",
-            "Ready to compose something special! 🎸",
-            "About to drop the beat... 🎧"
-            "Ah yes, another future Grammy nominee... 🏆",
-            "Making 'music' in air quotes... 🫢",
-            "Your neighbors are gonna love this... 🏡",
-            "Beethoven is rolling in his grave... but let's do it! ⚰️",
-            "Auto-tune can fix anything, right? 🎤"
-            "*Adjusts monocle* Preparing to generate in A♭ minor... 🧐",
-            "Contemplating the post-modern implications of your request... 🎭",
-            "Ensuring proper resonance with the cosmic frequency... ✨",
-            "Calculating the golden ratio of beats per minute... 📐",
-            "Channeling the avant-garde spirits... 👻"
-        ]
-
+        self.response_styles = {
+            'enthusiastic': {
+                'general': [
+                    "Making this! 👍",
+                    "Processing my request... ⚡",
+                    "On it! 🎨",
+                    "Starting generation... 🖼️",
+                    "Working on it! 🎯",
+                    "Challenge accepted! 🚀",
+                    "Let's make some art! 🎨",
+                    "Here we go! ✨",
+                    "Creating my vision... 🌟",
+                    "Magic in progress... ✨",
+                    "Beginning the creative process... 🎭",
+                    "Starting the image journey... 🗺️",
+                    "Firing up the generators... ⚡",
+                    "Initializing creative mode... 🎨",
+                    "Ready to create! 🎯"
+                ],
+                'image': [
+                    "Let's make some art! 🎨",
+                    "Creating your vision... 🌟",
+                    "Starting the image journey... 🗺️",
+                ],
+                'music': [
+                    "Let's lay down some tracks! 🎵",
+                    "Time to make musical magic! 🎹",
+                    "Getting the studio warmed up! 🎼",
+                    "Ready to compose something special! 🎸",
+                    "About to drop the beat... 🎧"
+                ]
+            },
+            'sarcastic': {
+                'general': [
+                    "Well, that is... certainly a choice... 🤨",
+                    "Interesting use of technology.... 👀",
+                    "Do your parents know you're into that? 😅",
+                    "Oh, we're really doing this, huh? 🫣",
+                    "This should be... something... ✨",
+                    "Preparing to make... whatever this is... 🎨",
+                    "Your genius is... fascinating... 🧐",
+                    "Starting your... unique... request... 🤔",
+                    "This will definitely be one for the archives... 📚",
+                    "Well, someone had to try it, I guess... 🤷",
+                    "Your creativity is... remarkable... 🎭",
+                    "Processing your... distinctive... vision... 👁️",
+                    "This should be... memorable... 🫢",
+                    "Living dangerously today, aren't we? 😏",
+                    "Boldly going where taste hasn't gone before... 🚀" 
+               ],
+                'image': [
+                    "Preparing to make... whatever this is... 🎨",
+                    "Your artistic vision is... unique... 👁️",
+                    "This should be... interesting... 🎭"
+                ],
+                'music': [
+                    "Ah yes, another future Grammy nominee... 🏆",
+                    "Making 'music' in air quotes... 🫢",
+                    "Your neighbors are gonna love this... 🏡",
+                    "Beethoven is rolling in his grave... but let's do it! ⚰️",
+                    "Auto-tune can fix anything, right? 🎤"
+                ]
+            },
+            'pretentious': {
+                'general': [
+                    "*Adjusts monocle* Contemplating your request... 🧐",
+                    "How... avant-garde of you... ✨",
+                ],
+                'image': [
+                    "Analyzing the post-modern implications of your composition... 🎭",
+                    "Calculating the golden ratio for optimal aesthetics... 📐",
+                    "Channeling the spirits of the great masters... 👻"
+                ],
+                'music': [
+                    "*Adjusts monocle* Preparing to generate in A♭ minor... 🧐",
+                    "Contemplating the post-modern implications of your request... 🎭",
+                    "Ensuring proper resonance with the cosmic frequency... ✨",
+                    "Calculating the golden ratio of beats per minute... 📐",
+                    "Channeling the avant-garde spirits... 👻"
+                ]
+            }
+        }
 
         # Store user states for resolution selection
         self.user_states = {}
@@ -171,11 +200,11 @@ class TelegramBot:
             #await self.acknowledge_command(event)
             await self.task_queue.put((event, handler))
         return wrapper
-
+    """
     async def acknowledge_command(self, event):
         command = event.message.text.split()[0] if event.message and event.message.text else "Unknown command"
         await event.reply(f"Received command {command}. Processing...")
-
+    """
     async def process_tasks(self):
         while True:
             if len(self.running_tasks) < self.max_concurrent_tasks:
@@ -375,13 +404,27 @@ class TelegramBot:
             
             # Clean up user state
             del self.user_states[user_id]
-            
+
             await event.answer()
             if generation_type == 'Random':
-                await original_event.reply(f"{random.choice(self.affirmative_responses)}\n\n{r_prompt}") 
+                response = await self.choose_response_style(
+                    context_type='general',
+                    user_input=prompt,
+                    user_id=user_id
+                )
+            
+                # Use response in your existing handler logic
+                await original_event.reply(response)
             else:   
-                await original_event.reply(random.choice(self.sarcastic_responses))
-            await self.process_image_prompt(generation_type, original_event, width, height, prompt)
+                response = await self.choose_response_style(
+                    context_type='image',
+                    user_input=prompt,
+                    user_id=user_id
+                )
+            
+                # Use response in your existing handler logic
+                await original_event.reply(response)
+                await self.process_image_prompt(generation_type, original_event, width, height, prompt)
 
         elif callback_type == 'voice':
             # Handle generation type selection
@@ -404,16 +447,63 @@ class TelegramBot:
             del self.user_states[user_id]
             
             await event.answer() 
-            await original_event.reply(random.choice(self.music_responses))
+            response = await self.choose_response_style(
+                context_type='music',
+                user_input=prompt,
+                user_id=user_id
+            )
+        
+            # Use response in your existing handler logic
+            await original_event.reply(response)
             await self.handle_music(original_event, file_length , prompt)
 
     def is_valid_resolution(self, width, height):
         return (256 <= width <= 1536 and 
                 256 <= height <= 1536)
-
+        
     #-----------------------------------------------------------------------------------------
     #telegram bot
-
+    async def choose_response_style(self, context_type, user_input, user_id=None, user_history=None):
+        """
+        Choose appropriate response style based on context and input.
+        
+        Args:
+            context_type (str): 'image', 'music', or 'general'
+            user_input (str): The user's input text
+            user_id (int, optional): User's Telegram ID for tracking history
+            user_history (list, optional): Previous interactions
+        """
+        # Keywords that might trigger different styles
+        pretentious_triggers = {'aesthetic', 'artistic', 'sophisticated', 'classical', 'symphony', 'masterpiece'}
+        sarcastic_triggers = {'lol', 'meme', 'funny', 'silly', 'weird', 'crazy'}
+        
+        # Convert input to lowercase for matching
+        input_lower = user_input.lower()
+        
+        # Check input length - longer, more detailed requests might warrant pretentious response
+        if len(user_input.split()) > 20:
+            style = 'pretentious'
+        # Check for trigger words
+        elif any(word in input_lower for word in pretentious_triggers):
+            style = 'pretentious'
+        elif any(word in input_lower for word in sarcastic_triggers):
+            style = 'sarcastic'
+        # Time-based personality (optional)
+        elif user_history and len(user_history) > 3:
+            if all("!" in msg for msg in user_history[-3:]):
+                style = 'enthusiastic'  # Match user's energy
+            else:
+                style = 'sarcastic'  # Default to sarcastic for regular users
+        else:
+            # Default to enthusiastic for new users or simple requests
+            style = 'enthusiastic'
+        
+        # Get appropriate response list
+        responses = self.response_styles[style][context_type]
+        
+        # Return random response from chosen style and context
+        return random.choice(responses)
+    
     async def get_ip(self, event):
         self.led_control_queue.put('telegram:' + str(True))
         ip_address, register = self.get_external_ip()
