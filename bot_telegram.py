@@ -22,7 +22,7 @@ import requests
 
 import comfyui_generation
 import text_generation
-import words
+import words_flux
 
 from dotenv import load_dotenv
 
@@ -54,6 +54,7 @@ class TelegramBot:
         self.task_queue = asyncio.Queue()
         self.max_concurrent_tasks = 1
         self.running_tasks = set()
+        self.prompt_generate = words_flux.FluxPromptGenerator()
 
         # Define preset resolutions
         self.preset_resolutions = {
@@ -64,15 +65,15 @@ class TelegramBot:
             "wide":(1536,512)
         }
         self.affirmative_responses = [
-            "Got it! 👍",
-            "Processing your request... ⚡",
+            "Making this! 👍",
+            "Processing my request... ⚡",
             "On it! 🎨",
             "Starting generation... 🖼️",
             "Working on it! 🎯",
             "Challenge accepted! 🚀",
             "Let's make some art! 🎨",
             "Here we go! ✨",
-            "Creating your vision... 🌟",
+            "Creating my vision... 🌟",
             "Magic in progress... ✨",
             "Beginning the creative process... 🎭",
             "Starting the image journey... 🗺️",
@@ -80,6 +81,43 @@ class TelegramBot:
             "Initializing creative mode... 🎨",
             "Ready to create! 🎯"
         ]
+        self.sarcastic_responses = [
+            "Well, that is... certainly a choice... 🤨",
+            "Interesting use of technology.... 👀",
+            "Do your parents know you're into that? 😅",
+            "Oh, we're really doing this, huh? 🫣",
+            "This should be... something... ✨",
+            "Preparing to make... whatever this is... 🎨",
+            "Your genius is... fascinating... 🧐",
+            "Starting your... unique... request... 🤔",
+            "This will definitely be one for the archives... 📚",
+            "Well, someone had to try it, I guess... 🤷",
+            "Your creativity is... remarkable... 🎭",
+            "Processing your... distinctive... vision... 👁️",
+            "This should be... memorable... 🫢",
+            "Living dangerously today, aren't we? 😏",
+            "Boldly going where taste hasn't gone before... 🚀"
+        ]
+
+        self.music_responses = [
+
+            "Let's lay down some tracks! 🎵",
+            "Time to make musical magic! 🎹",
+            "Getting the studio warmed up! 🎼",
+            "Ready to compose something special! 🎸",
+            "About to drop the beat... 🎧"
+            "Ah yes, another future Grammy nominee... 🏆",
+            "Making 'music' in air quotes... 🫢",
+            "Your neighbors are gonna love this... 🏡",
+            "Beethoven is rolling in his grave... but let's do it! ⚰️",
+            "Auto-tune can fix anything, right? 🎤"
+            "*Adjusts monocle* Preparing to generate in A♭ minor... 🧐",
+            "Contemplating the post-modern implications of your request... 🎭",
+            "Ensuring proper resonance with the cosmic frequency... ✨",
+            "Calculating the golden ratio of beats per minute... 📐",
+            "Channeling the avant-garde spirits... 👻"
+        ]
+
 
         # Store user states for resolution selection
         self.user_states = {}
@@ -101,11 +139,9 @@ class TelegramBot:
             ('/getip', self.get_ip),
             ('/checkservices', self.check_services),
             ('/image', self.handle_image_generation),  # New unified command
-            ('/random', self.process_random_prompt),
-            ('/speak_male', partial(self.handle_speak, 'male')),
-            ('/speak_female', partial(self.handle_speak, 'female')),
+            ('/speak', self.handle_speak_handler),
             ('/voice', self.handle_voice),
-            ('/music', self.handle_music),
+            ('/music', self.handle_music_handler),
             ('/ask', self.handle_messages),
             ('/webcam_on', self.handle_webcam_on),
             ('/webcam_off', self.handle_webcam_off),
@@ -178,8 +214,11 @@ class TelegramBot:
         # Create inline keyboard for generation type selection
         keyboard = [
             [
-                Button.inline("Normal Generation", data=f"type_normal_{user_id}"),
-                Button.inline("Enhanced Generation", data=f"type_enhanced_{user_id}")
+                Button.inline("Normal Generation", data=f"type_Normal_{user_id}"),
+                Button.inline("Enhanced Generation", data=f"type_Enhanced_{user_id}")
+            ],
+            [
+                Button.inline("Random Generation", data=f"type_Random_{user_id}")
             ]
         ]
         
@@ -216,6 +255,85 @@ class TelegramBot:
             buttons=keyboard
         )
 
+    async def handle_speak_handler(self, event):
+        user_id = event.sender_id
+        message = event.message.text.split(None, 1)
+        
+        # Create inline keyboard for generation type selection
+        keyboard = [
+            [
+                Button.inline("Male Voice 1", data=f"voice_maleA_{user_id}"),
+                Button.inline("Male voice 2", data=f"voice_maleB_{user_id}")
+            ],
+            [
+                Button.inline("Woman Voice 1", data=f"voice_womanA_{user_id}"),
+                Button.inline("Woman Voice 2", data=f"voice_womanB_{user_id}")
+
+            ]
+        ]
+        
+        # Store the original prompt in user state
+        prompt = message[1] if len(message) > 1 else ''
+        self.user_states[user_id] = {
+            'prompt': prompt,
+            'original_message': event
+        }
+        
+        await event.reply(
+            "Please select voice type:",
+            buttons=keyboard
+        )
+
+    async def handle_voice_handler(self, event):
+        await self.handle_voice(event)
+
+    async def handle_music_handler(self, event):
+        user_id = event.sender_id
+        message = event.message.text.split(None, 1)
+        
+        # Create inline keyboard for generation type selection
+        keyboard = [
+            [
+                Button.inline("3 Sec", data=f"music_3_{user_id}"),
+                Button.inline("5 Sec", data=f"music_5_{user_id}"),
+                Button.inline("10 Sec", data=f"music_10_{user_id}")
+            ],
+            [
+                Button.inline("15 Sec", data=f"music_15_{user_id}"),
+                Button.inline("20 Sec", data=f"music_20_{user_id}"),
+                Button.inline("30 Sec", data=f"music_30_{user_id}")
+            ],
+            [
+                Button.inline("60 Sec", data=f"music_60_{user_id}"),
+                Button.inline("90 Sec", data=f"music_90_{user_id}"),
+                Button.inline("120 Sec", data=f"music_120_{user_id}")
+            ]
+        ]
+        
+        # Store the original prompt in user state
+        prompt = message[1] if len(message) > 1 else ''
+        self.user_states[user_id] = {
+            'prompt': prompt,
+            'original_message': event
+        }
+        
+        await event.reply(
+            "How long do you want that sample to be?",
+            buttons=keyboard
+        )
+
+
+        #await self.handle_music(event)
+
+    async def handle_ask_handler(self, event):
+        await self.handle_messages(event)
+
+    async def handle_webcam_on_handler(self, event):
+        await self.handle_webcam_on(event)
+
+    async def handle_webcam_off_handler(self, event):
+        await self.handle_webcam_off(event)
+
     async def handle_callback(self, event):
         user_id = int(event.data.decode().split('_')[-1])
         callback_type = event.data.decode().split('_')[0]
@@ -247,44 +365,51 @@ class TelegramBot:
             # Get resolution from presets
             width, height = self.preset_resolutions[resolution_type]
             original_event = self.user_states[user_id]['original_message']
-            prompt = self.user_states[user_id]['prompt']
             generation_type = self.user_states[user_id]['generation_type']
+            if generation_type == 'Random':
+                u_prompt = self.user_states[user_id]['prompt']
+                r_prompt = self.prompt_generate.generate_prompt()
+                prompt = f"{u_prompt} {r_prompt}"
+            else:
+                prompt = self.user_states[user_id]['prompt']
             
             # Clean up user state
             del self.user_states[user_id]
             
             await event.answer()
-            await original_event.reply(random.choice(self.affirmative_responses))
+            if generation_type == 'Random':
+                await original_event.reply(f"{random.choice(self.affirmative_responses)}\n\n{r_prompt}") 
+            else:   
+                await original_event.reply(random.choice(self.sarcastic_responses))
             await self.process_image_prompt(generation_type, original_event, width, height, prompt)
+
+        elif callback_type == 'voice':
+            # Handle generation type selection
+            voice_type = event.data.decode().split('_')[1]
+            prompt = self.user_states[user_id]['prompt']
+            original_event = self.user_states[user_id]['original_message']
+
+            del self.user_states[user_id]
+            await event.answer()
+            await self.handle_speak(original_event,voice_type, prompt)
+ 
+        elif callback_type == 'music':
+            file_length = event.data.decode().split('_')[1]
+            
+            # Get resolution from presets
+            original_event = self.user_states[user_id]['original_message']
+            prompt = self.user_states[user_id]['prompt']
+            
+            # Clean up user state
+            del self.user_states[user_id]
+            
+            await event.answer() 
+            await original_event.reply(random.choice(self.music_responses))
+            await self.handle_music(original_event, file_length , prompt)
 
     def is_valid_resolution(self, width, height):
         return (256 <= width <= 1536 and 
                 256 <= height <= 1536)
-
-    async def handle_random_image_handler(self, event):
-        await self.process_random_prompt(event)
-
-    async def handle_speak_male_handler(self, event):
-        await self.handle_speak(event, 'male')
-
-    async def handle_speak_female_handler(self, event):
-        await self.handle_speak(event,'female')
-    
-    async def handle_voice_handler(self, event):
-        await self.handle_voice(event)
-
-    async def handle_music_handler(self, event):
-        await self.handle_music(event)
-
-    async def handle_ask_handler(self, event):
-        await self.handle_messages(event)
-
-    async def handle_webcam_on_handler(self, event):
-        await self.handle_webcam_on(event)
-
-    async def handle_webcam_off_handler(self, event):
-        await self.handle_webcam_off(event)
-
 
     #-----------------------------------------------------------------------------------------
     #telegram bot
@@ -411,47 +536,7 @@ class TelegramBot:
     #------------------------------------------------------------------------------------------
     #Image Generation - ComfyUI
 
-    async def process_random_prompt(self,event):
-        self.led_control_queue.put('telegram:'+ str(True))
-        client_id = str(uuid.uuid4())
-        prompt = self.load_json(COMFYUI_PROMPT)
-
-        user_message = words.fetch_random_prompt()
-
-        prompt["102"]["inputs"]["text"] = user_message
-
-        self.log_queue.put(f"Generating Random Image of : {user_message}\n")
-        await event.reply(f"Generating Random Image of : {user_message}\n")
-
-        self.led_control_queue.put('monolith:'+ str(True))
-        images_data,error = comfyui_generation.do_stuff('images',prompt,client_id)
-        self.led_control_queue.put('monolith:'+ str(False))
-
-        if images_data is not None:
-            # Send each image in the batch
-            for i, img_data in enumerate(images_data, 1):
-                image_file = io.BytesIO(img_data)
-                image_file.name = f'generated_image_{i}.png'
-                
-                # Add a small delay between sends to avoid rate limiting
-                if i > 1:
-                    await asyncio.sleep(0.5)
-                
-                try:
-                    await event.reply(
-                        file=image_file
-                        #caption=f"Image {i} of {len(images_data)}" if len(images_data) > 1 else None
-                    )
-                except Exception as e:
-                    self.log_queue.put(f"Error sending image {i}: {str(e)}\n")
-                    await event.reply(f"Error sending image {i}: {str(e)}")
-        else:
-            self.log_queue.put(f"Sorry, there was an error generating the images:\n{error}\n")
-            await event.reply(f"Sorry, there was an error generating the images:\n{error}")
-            
-        self.led_control_queue.put('telegram:' + str(False))
-
-    async def process_image_prompt(self, i_type, event, width=512, height=512, user_message=''):
+    async def process_image_prompt(self, i_type, event, width=512, height=512, user_message='', its=1):
         self.led_control_queue.put('telegram:' + str(True))
         client_id = str(uuid.uuid4())
         
@@ -468,9 +553,11 @@ class TelegramBot:
             return
             
         prompt = {}
-        if i_type == 'normal':
+        if i_type == 'Normal':
             prompt = self.load_json(COMFYUI_PROMPT)
-        elif i_type == 'enhanced':
+        elif i_type == 'Random':
+            prompt = self.load_json(COMFYUI_PROMPT)
+        elif i_type == 'Enhanced':
             prompt = self.load_json(COMFYUI_PROMPT_ENHANCE)
             
         # Update the prompt with resolution
@@ -480,8 +567,7 @@ class TelegramBot:
         prompt["80"]["inputs"]["height"] = height
         #prompt["80"]["inputs"]["batch_size"] = 2
         
-        generation_type = "Normal" if i_type == "normal" else "Enhanced"
-        self.log_queue.put(f"Generating {generation_type} Image of: {user_message} at {width}x{height}\n")
+        self.log_queue.put(f"Generating {i_type} Image of: {user_message} at {width}x{height}\n")
         self.led_control_queue.put('monolith:' + str(True))
         
         images_data, error = comfyui_generation.do_stuff('images', prompt, client_id)
@@ -514,32 +600,38 @@ class TelegramBot:
     #------------------------------------------------------------------------------------------
     # voice
 
-    async def handle_speak(self, v_type, event):
+    async def handle_speak(self, event,v_type, user_message=''):
         self.led_control_queue.put('telegram:' + str(True))
 
         # TTS settings
-        female_voice = 'p339'
-        male_voice = 'p313'
+        womanA = 'p339'
+        womanB = 'p335'
+        maleA = 'p313'
+        maleB = 'p340'
         SPEAKER_ID = 'p376'  # You can change this or make it configurable
         LANGUAGE_ID = ''  # Leave empty or set as needed
 
-        user_message = event.message.text.split(None, 1)[1] if len(event.message.text.split()) > 1 else ''
-
-        if v_type == 'male':
-            SPEAKER_ID = male_voice
-        elif v_type == 'female':
-            SPEAKER_ID = female_voice
-
-        if event.message.is_reply:
-            replied = await event.message.get_reply_message()
-            if replied.text:
-                user_message += " " + replied.text
-
+        if not user_message:
+            user_message = event.message.text.split(None, 1)[1] if len(event.message.text.split()) > 1 else ''
+            if event.message.is_reply:
+                replied = await event.message.get_reply_message()
+                if replied.text:
+                    user_message += " " + replied.text
+        
         if not user_message:
             await event.reply('Please provide some text.')
             self.led_control_queue.put('telegram:' + str(False))
             return
-        
+
+        if v_type == 'maleA':
+            SPEAKER_ID = 'p313'
+        elif v_type == 'maleB':
+            SPEAKER_ID = 'p340'
+        if v_type == 'womanA':
+            SPEAKER_ID = 'p339'
+        elif v_type == 'womanB':
+            SPEAKER_ID = 'p335'
+
         self.log_queue.put(f"User Message: {user_message}\n")
         encoded_text = urllib.parse.quote(user_message)
         full_url = f'{TTS_SERVER_URL}/api/tts?text={encoded_text}&speaker_id={SPEAKER_ID}&style_wav=&language_id={LANGUAGE_ID}'
@@ -631,70 +723,89 @@ class TelegramBot:
     #------------------------------------------------------------------------------------------
     # music
 
-    async def handle_music(self, event):
-        self.led_control_queue.put('telegram:'+ str(True))
-
+    async def handle_music(self, event, file_length=20, user_message=''):
+        self.led_control_queue.put('telegram:' + str(True))
         client_id = str(uuid.uuid4())
-       # Get the full message text
-        full_message = event.message.text
-
-        # Remove the command from the beginning of the message
-        user_message = full_message.split(None, 1)[1] if len(full_message.split()) > 1 else ''
-
-        # Split the user message into words
-        args = user_message.split()
-
-        prompt = self.load_json(COMFYUI_MUSIC)
-        prompt["11"]["inputs"]["seconds"] = 20  # Default value
-
-        # Check if the first argument is a number (file length)
-        if args and args[0].isdigit():
-            file_length = int(args[0])
-            prompt["11"]["inputs"]["seconds"] = file_length
-            args = args[1:]  # Remove the first argument
-            user_message = ' '.join(args)  # Rejoin the remaining arguments
         
-        if event.message.is_reply:
-            replied = await event.message.get_reply_message()
-            if replied.text:
-                user_message += " " + replied.text
-
+        if not user_message:
+            user_message = event.message.text.split(None, 1)[1] if len(event.message.text.split()) > 1 else ''
+            if event.message.is_reply:
+                replied = await event.message.get_reply_message()
+                if replied.text:
+                    user_message += " " + replied.text
+        
         if not user_message:
             await event.reply('Please provide some text.')
             self.led_control_queue.put('telegram:' + str(False))
             return
+        
+        # Load prompt template
+        prompt = self.load_json(COMFYUI_MUSIC)
+        prompt["11"]["inputs"]["seconds"] = file_length  # Default value
 
+        # Update prompt with user message and random seed
         prompt["6"]["inputs"]["text"] = user_message
-        prompt["3"]["inputs"]["seed"] = random.randint(1,4294967294)
+        prompt["3"]["inputs"]["seed"] = random.randint(1, 4294967294)
 
+        # Log and start generation
         self.log_queue.put(f"Generating Music File about: {user_message}\n")
-        self.led_control_queue.put('monolith:'+ str(True))
-        raw_flac,error = comfyui_generation.do_stuff('audio',prompt,client_id)
-        self.led_control_queue.put('monolith:'+ str(False))
-        if raw_flac is not None:
+        self.led_control_queue.put('monolith:' + str(True))
+        
+        audio_files, error = comfyui_generation.do_stuff('audio', prompt, client_id)
+        self.led_control_queue.put('monolith:' + str(False))
+
+        if audio_files is not None:
             try:
-                mp3_data = self.convert_audio_to_mp3(raw_flac, "flac")
-                
-                # Convert the MP3 data to a file-like object
-                audio_file = io.BytesIO(mp3_data.getvalue())
-                audio_file.name = 'music_sample.mp3'
-                # Get the user's name for the performer attribute
+                # Get user info for performer attribute
                 user = await event.get_sender()
                 performer = user.first_name if user.first_name else user.username
                 performer = f"BRAVOLITH feat. {performer}"
-                # Send the audio file
-                await event.reply(file=audio_file, attributes=[
-                    types.DocumentAttributeAudio(
-                        duration=0,  # You can set the duration if known
-                        title="Generated Music Sample",
-                        performer=performer
-                    )
-                ])
-
+                
+                # Process each audio file
+                for i, audio_data in enumerate(audio_files, 1):
+                    try:
+                        # Convert FLAC to MP3
+                        mp3_data = self.convert_audio_to_mp3(audio_data, "flac")
+                        if mp3_data is None or mp3_data.getvalue() == b'':
+                            raise ValueError("Converted MP3 data is empty")
+                        
+                        # Prepare audio file for sending
+                        audio_file = io.BytesIO(mp3_data.getvalue())
+                        audio_file.name = f'music_sample_{i}.mp3'
+                        
+                        # Add a small delay between multiple files
+                        if i > 1:
+                            await asyncio.sleep(0.5)
+                        
+                        # Send the audio file
+                        await event.reply(
+                            file=audio_file,
+                            attributes=[
+                                types.DocumentAttributeAudio(
+                                    duration=0,  # You can set the duration if known
+                                    title=f"Generated Music Sample {i}",
+                                    performer=performer
+                                )
+                            ],
+                            
+                        )
+                        
+                        # Log success
+                        self.log_queue.put(f"Successfully sent audio file {i}\n")
+                        
+                    except Exception as e:
+                        error_msg = f"Error processing audio file {i}: {str(e)}"
+                        self.log_queue.put(f"{error_msg}\n")
+                        await event.reply(error_msg)
+                        
             except Exception as e:
-                await event.reply(f"Sorry, there was an error converting the audio: {str(e)}")
+                error_msg = f"Error getting user info: {str(e)}"
+                self.log_queue.put(f"{error_msg}\n")
+                await event.reply(error_msg)
         else:
-            await event.reply(f"ComfyUI error:\n{error}")
+            error_msg = f"ComfyUI error:\n{error}"
+            self.log_queue.put(f"{error_msg}\n")
+            await event.reply(error_msg)
 
         self.led_control_queue.put('telegram:' + str(False))
 
